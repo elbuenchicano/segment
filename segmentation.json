@@ -1,0 +1,34 @@
+{
+  "function": "createTrainValTestList",
+
+  "general": {
+	"directory"	: "research/segmentation",
+        "path_op"	: "win",
+	"prefix_path"	: {
+		"win"	      : "d:/",
+		"linux"	    : "/media/rensso/3012FA9412FA5DF2"
+	}
+	
+  },
+
+  "preprocessingPpm": {
+    "im_size"	: [ 224 ,224 ],
+    "im_dir" 	: "datasets/image_files"
+  },
+  
+  "preprocessingTree": { 
+	"im_list"	: "research/segmentation/lists/224_224_file_list_ppm.lst",
+	"cmd1"		: "programs/medics/segmentation/segmentation/codeEdward/codeEdward/image2graph/linux/bin/ppm2graph",
+	"cmd2"		: "programs/medics/segmentation/segmentation/codeEdward/codeEdward/hgbGraphInterval.sh"	
+
+  },
+  "createTrainValTestList": {
+	"image_list" 	: "D:/research/segmentation/lists/224_224_file_list_ppm.lst",
+	"image_list_gt" : "D:/research/segmentation/lists/224_224_file_list_gt.lst",
+	"root"			: "d:/research/segmentation/scale/224_224",
+	"k_folds"		: 5
+	
+  }
+  
+	
+}
