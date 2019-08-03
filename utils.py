@@ -100,9 +100,10 @@ def u_saveArrayTuple2File(file_name, data):
     print('Saving data in: ' + file_name)
     F = open(file_name,'w') 
     for item in data:
+        line = ''
         for tup in item:
-            F.write(str(tup))
-            F.write(' ')
+            line += str(tup) + ' '
+        F.write(line.strip())
         F.write('\n')
     F.close()
 ################################################################################

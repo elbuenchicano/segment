@@ -1,11 +1,11 @@
 {
-  "function": "createTrainValTestList",
+  "function": "preprocessingPpm",
 
   "general": {
-	"directory"	: "research/segmentation",
+	"directory"	: "research/segmentation2",
         "path_op"	: "win",
 	"prefix_path"	: {
-		"win"	      : "d:/",
+		"win"	      : "d:",
 		"linux"	    : "/media/rensso/3012FA9412FA5DF2"
 	}
 	
@@ -25,9 +25,12 @@
   "createTrainValTestList": {
 	"image_list" 	: "D:/research/segmentation/lists/224_224_file_list_ppm.lst",
 	"image_list_gt" : "D:/research/segmentation/lists/224_224_file_list_gt.lst",
-	"root"			: "d:/research/segmentation/scale/224_224",
 	"k_folds"		: 5
 	
+  },
+  
+  "trainModel" : {
+  
   }
   
 	

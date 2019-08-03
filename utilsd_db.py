@@ -56,14 +56,12 @@ def ud_MkFolds(nfiles, folds = 5, shuffle= True):
     if shuffle:
         random.shuffle(idx)
 
-    prev = 0
+    for i in range(0, nfiles, s_fold):
+        idx_f.append(idx[i:(i+s_fold)])
+        prev    = i + s_fold
 
-    for i in range(s_fold, nfiles, s_fold):
-        idx_f.append(idx[prev:i])
-        prev    = i
-
-    if nfiles % folds:
-        np.append(idx_f[folds-1], idx[prev:(nfiles-1)] )
+    if prev < nfiles:
+        np.append(idx_f[folds-1], idx[prev:(nfiles)] )
 
     return idx_f
     
