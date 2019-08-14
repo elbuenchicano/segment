@@ -1,11 +1,16 @@
 import os 
 import subprocess 
-import cv2
 import shlex
+import time
 
+from timeit import default_timer as timer
 from PIL import Image
 from utils import *
 from utilsd_db import *
+from torchvision import transforms, utils
+from model import *
+
+
 
 ################################################################################
 ################################################################################
@@ -39,48 +44,64 @@ def preprocessingPpm(general, individual):
     u_mkdir(out_dir_imgs)
 
     n = len(file_list)
+
+    m0 = []
+    m1 = []
+    m2 = []
+    s0 = []
+    s1 = []
+    s2 = []
+
+
     for i in range(n):
         u_progress(i, n)
 
         file    = file_list[i] 
         img     = Image.open(file)
         img     = img.resize(im_size, Image.ANTIALIAS)            
-
-        #nimg    = np.array(img)
-
-        img     = cv2.imread(file)    
-        img     = cv2.resize(img, im_size, interpolation= cv2.INTER_AREA)
-        
-        file    = os.path.basename(file)
-
-
+        img     = img.convert('RGB')
+        nimg    = np.array(img)
+        nimg    = np.moveaxis(nimg, 2, 0)
 
 
         if file.find('gt') < 0:
             file_list_ori.append(file_list[i])            
 
             file_name   = file.replace('png', 'ppm')
-            full_name   = out_dir_imgs + file_name   
+            full_name   = out_dir_imgs + os.path.basename(file_name)
 
             img.save(full_name, 'ppm')
             file_list_ori_ppm.append(file_name)
 
         else:
+
+            m0.append(np.mean(nimg[0]))
+            m1.append(np.mean(nimg[1]))
+            m2.append(np.mean(nimg[2]))
+            s0.append(np.std(nimg[0]))
+            s1.append(np.std(nimg[1]))
+            s2.append(np.std(nimg[2]))
+
             file_list_gt.append(file)
             full_name   = out_dir_imgs + file
             img.save(full_name, 'png')
 
 
+    m_s = ([np.mean(m0), np.mean(m1), np.mean(m2)],
+           [np.mean(s0), np.mean(s1), np.mean(s2)])
+    
+    u_saveArrayTuple2File(  out_dir_list + label + '_mean_std.txt', 
+                            m_s)
     
     
-    #u_saveArray2File(   out_dir_list + label + '_file_list_original.lst', 
-    #                    file_list_ori)
+    u_saveArray2File(   out_dir_list + label + '_file_list_original.lst', 
+                        file_list_ori)
 
-    #u_saveFlist2File(out_dir_list + label + '_file_list_gt.lst', 
-    #                    out_dir_imgs, file_list_gt)
+    u_saveFlist2File(out_dir_list + label + '_file_list_gt.lst', 
+                        out_dir_imgs, file_list_gt)
 
-    #u_saveFlist2File(out_dir_list + label + '_file_list_ppm.lst', 
-    #                    out_dir_imgs, file_list_ori_ppm)
+    u_saveFlist2File(out_dir_list + label + '_file_list_ppm.lst', 
+                        out_dir_imgs, file_list_ori_ppm)
 
 ################################################################################
 ################################################################################
@@ -145,20 +166,6 @@ def preprocessingTree(general, individual):
                         out_dir_graphs, 
                         pgm_files)
     
-
-################################################################################
-################################################################################
-################################################################################
-# Treee segmentation based on edus model
-def trainModel(general, individual):
-    path        = general['prefix_path'][general['path_op']]
-    directory   = path + '/' + general['directory']
-
-    im_list     = path + '/' + individual['im_list']
-    cmd1        = path + '/' + individual['cmd1']
-    cmd2        = path + '/' + individual['cmd2']
-
-
 ################################################################################
 ################################################################################
 def createTrainValTestList(general, individual):
@@ -167,7 +174,6 @@ def createTrainValTestList(general, individual):
 
     image_list      = individual['image_list']
     image_list_gt   = individual['image_list_gt']
-    k_folds         = individual['k_folds']
     
     #...........................................................................
     out_dir_list    = directory + '/lists/'
@@ -188,11 +194,7 @@ def createTrainValTestList(general, individual):
 
         patient_list[patient][frame].append(n)
 
-    n       = len(patient_list)
-    folds   = ud_MkFolds(n, k_folds)
-
-    u_saveDict2File(out_dir_list + '/patients.json', patient_list)
-    u_saveArrayTuple2File(out_dir_list + '/folds.lst', folds)
+    u_saveDict2File(out_dir_list + 'patients.json', patient_list)
     
 ################################################################################
 ################################################################################
@@ -201,121 +203,69 @@ def trainModel(general, individual):
     directory   = path + '/' + general['directory']
 
     patient_list    = individual['patient_list']
-    folds_saved     = individual['fold_list']
+    nfolds          = individual['nfolds']
     image_root      = individual['image_root']
+    p_root          = individual['p_root']
+
+    img_ext         = individual['img_ext']
+    gt_ext          = individual['gt_ext']
+    p_ext           = individual['p_ext']
+   
+    n_epochs        = individual['n_epochs']
 
     #...........................................................................
     patients    = u_loadJson(patient_list)   
-    folds       = u_fileNumberList2array(folds_saved)
 
-    #...........................................................................
     info        = {
         "patients"  : patients,
-        "folds"     : folds,
-        "ite_fold"  : 0,
+        "nfolds"    : nfolds,
         "iroot"     : image_root,
+        "img_ext"   : img_ext,
+        "gt_ext"    : gt_ext,
+        "p_ext"     : p_ext,
+        "proot"     : p_root,
         "bypatient" : True,
-        "train"     : True
+        "train"     : True,
+        "salience"  : True
     }
 
-    image_transforms = {
-        # Train uses data augmentation
-        'train':
-        transforms.Compose([
-            transforms.RandomResizedCrop(size=256, scale=(0.8, 1.0)),
-            transforms.RandomRotation(degrees=15),
-            transforms.ColorJitter(),
-            transforms.RandomHorizontalFlip(),
-            transforms.CenterCrop(size=224),  # Image net standards
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406],
-                                 [0.229, 0.224, 0.225])  # Imagenet standards
-        ]),
-        # Test does not use augmentation
-        'test':
-        transforms.Compose([
-            transforms.Resize(size=256),
-            transforms.CenterCrop(size=224),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-    }
+    batch_size      = 8 
+    train_dataset   = DbSegment(info)
+    train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 
-    train = DbSegment(info, image_transforms)
-    
+    unet    = UNet(4,3).cuda()
+    summary(unet, (4, 184, 184), batch_size = batch_size)
 
+    criterion = torch.nn.MultiLabelSoftMarginLoss()
+    optimizer = torch.optim.SGD(unet.parameters(), lr = 0.01, momentum=0.99)
+    optimizer.zero_grad()       
 
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-class DbSegment(Dataset):
-    
-    def __init__(self, info, transform=None):
+    for epoch in range(n_epochs):
 
-        if info["bypatient"]:
-            self.data_path, self.data_labels  = self.formatInputPatient()
-        else: 
-            self.data_path, self.data_labels  = self.formatInputImage()
+        train_loss = 0.0 
+        start = timer()
 
-        if info["train"]:
-            self.transform = transform["train"]
-        else:
-            self.transform = transform["test"]
+        for i, (img, gt, _) in enumerate(train_loader):
+            for j in range(1, len(img)):
+           
+                img_    = img[j].cuda()
+                gt_     = gt[j].cuda()
 
+                outputs = unet(img_)
+                loss = criterion(outputs, gt_)
+                loss.backward()
+                optimizer.step()
 
-
-
-
-    #---------------------------------------------------------------------------
-    def __len__(self):
-        return len(self.data_labels)
-    
-    #---------------------------------------------------------------------------
-    def __getitem__(self, index):
-        image = Image.open(self.data_path[index])
-        
-        if len(image.getbands()) == 1:
-            image = np.stack((image,)*3, axis=-1)
-            image = Image.fromarray(image)
-        
-        if self.transform is not None:
-            image = self.transform(image)
-
-        return image, self.data_labels[index]
-  
-    #---------------------------------------------------------------------------
-    ## utils
-    def formatInputPatient(self, patients):
-        data_path   = []
-        data_labels = []
-        
-        cls = 0
-        values = patients.values()
-
-        for i in range( len( values) ):
-
-            for frm in patients[pt]: 
-               for im in frm:
-                    data_labels.append(cls)
                 
-                    data_path.append(item)
-
-            cls += 1
-
-        return data_path, torch.tensor(data_labels) 
-    
-    
-        
-
-            
-            
+                # Track training progress
+                print ('Epoch: {} \t, {} loss.'.format(epoch, loss))
 
 
 
-    
-
-
-
-
+################################################################################
+################################################################################
+def show_tensor(img):
+    npimg = img.numpy()
+    npimg = np.transpose(npimg, (1, 2, 0) )
+    plt.imshow(npimg)
+    plt.show()

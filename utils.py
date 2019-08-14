@@ -60,6 +60,7 @@ def u_saveList2File(file_name, data):
         item = item.strip()
         F.write(item + '\n')
     F.close()
+
 ################################################################################
 ################################################################################
 def u_fileNumberList2array(file_name):
@@ -69,6 +70,22 @@ def u_fileNumberList2array(file_name):
     for item in F:
         if len(item) > 0:
             lst.append(float(item))
+    F.close()
+    return lst
+
+################################################################################
+################################################################################
+def u_fileNumberMat2array(file_name):
+    print('Loading data from: ' + file_name)
+    F = open(file_name,'r') 
+    lst = []
+    for item in F:
+        if len(item) > 0:
+            item = item.split(' ')
+            sub  = []
+            for i in item:
+                sub.append(float(i))
+            lst.append(sub)
     F.close()
     return lst
 

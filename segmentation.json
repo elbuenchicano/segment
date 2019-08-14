@@ -1,5 +1,5 @@
 {
-  "function": "preprocessingPpm",
+  "function": "trainModel",
 
   "general": {
 	"directory"	: "research/segmentation2",
@@ -24,13 +24,18 @@
   },
   "createTrainValTestList": {
 	"image_list" 	: "D:/research/segmentation/lists/224_224_file_list_ppm.lst",
-	"image_list_gt" : "D:/research/segmentation/lists/224_224_file_list_gt.lst",
-	"k_folds"		: 5
-	
+	"image_list_gt" : "D:/research/segmentation/lists/224_224_file_list_gt.lst"	
   },
   
   "trainModel" : {
-  
+	"patient_list" 	: "D:/research/segmentation/lists/patients.json",
+	"image_root" 	: "d:/research/segmentation/scale/224_224",
+	"p_root"		: "d:/research/segmentation/segbase",
+	"img_ext"		: ".ppm",
+	"gt_ext"		: ".png",
+	"p_ext"			: ".pgm",	
+	"nfolds"		: 7,
+	"n_epochs"		: 20
   }
   
 	

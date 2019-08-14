@@ -11,7 +11,8 @@ def _main():
     funcdict = { 'trainModel'               : trainModel,
                  'preprocessingPpm'         : preprocessingPpm,
                  'preprocessingTree'        : preprocessingTree,
-                 'createTrainValTestList'   : createTrainValTestList
+                 'createTrainValTestList'   : createTrainValTestList,
+                 'trainModel'               : trainModel
                 }
     
     conf    = u_getPath('segmentation.json')
