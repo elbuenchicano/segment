@@ -231,41 +231,60 @@ def trainModel(general, individual):
 
     batch_size      = 8 
     train_dataset   = DbSegment(info)
-    train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    test_dataset    = DbSegment(info, train_dataset.data_path_test, train_dataset.data_lbl_test)
 
-    unet    = UNet(4,3).cuda()
+
+    #train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader    = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    #unet    = UNet(4,1).cuda()
+
+    unet    = torch.load('pesos.pt').cuda()
+    unet.eval()
+
     summary(unet, (4, 184, 184), batch_size = batch_size)
 
-    criterion = torch.nn.MultiLabelSoftMarginLoss()
-    optimizer = torch.optim.SGD(unet.parameters(), lr = 0.01, momentum=0.99)
-    optimizer.zero_grad()       
+    for i, (img, gt, _) in enumerate(train_loader):
+        for j in range(1, len(img)):
+            img_    = img[j].cuda()
+            gt_     = gt[j].cuda()
+            outputs = unet(img_)
+            show_tensor(outputs)
 
-    for epoch in range(n_epochs):
+            npimg = gt_[0].cpu().detach().numpy()
+    
+            npimg = np.transpose(npimg, (1, 2, 0) )
+            plt.imshow(npimg[:,:,0])
+            plt.show()
 
-        train_loss = 0.0 
-        start = timer()
+    # criterion = torch.nn.MSELoss(reduction='sum').cuda()
+    # optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
+    
 
-        for i, (img, gt, _) in enumerate(train_loader):
-            for j in range(1, len(img)):
+    # for epoch in range(n_epochs):
+    #     for i, (img, gt, _) in enumerate(train_loader):
+    #         for j in range(1, len(img)):
            
-                img_    = img[j].cuda()
-                gt_     = gt[j].cuda()
+    #             img_    = img[j].cuda()
+    #             gt_     = gt[j].cuda()
 
-                outputs = unet(img_)
-                loss = criterion(outputs, gt_)
-                loss.backward()
-                optimizer.step()
+    #             outputs = unet(img_)
+    #             loss = criterion(outputs, gt_)
+    #             optimizer.zero_grad()       
+    #             loss.backward()
+    #             optimizer.step()
 
                 
-                # Track training progress
-                print ('Epoch: {} \t, {} loss.'.format(epoch, loss))
+    #             # Track training progress
+    #             print ('Epoch: {} \t, {} loss.'.format(epoch, loss))
 
-
+    # torch.save(unet, 'pesos.pt')
 
 ################################################################################
 ################################################################################
 def show_tensor(img):
-    npimg = img.numpy()
+    npimg = img[0].cpu().detach().numpy()
+    
     npimg = np.transpose(npimg, (1, 2, 0) )
-    plt.imshow(npimg)
+    plt.imshow(npimg[:,:,0])
     plt.show()

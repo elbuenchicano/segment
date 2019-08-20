@@ -2,11 +2,11 @@
   "function": "trainModel",
 
   "general": {
-	"directory"	: "research/segmentation2",
-        "path_op"	: "win",
+	"directory"	: "research/segmentation",
+        "path_op"	: "linux",
 	"prefix_path"	: {
 		"win"	      : "d:",
-		"linux"	    : "/media/rensso/3012FA9412FA5DF2"
+		"linux"	    : "/home/rensso"
 	}
 	
   },
@@ -28,9 +28,9 @@
   },
   
   "trainModel" : {
-	"patient_list" 	: "D:/research/segmentation/lists/patients.json",
-	"image_root" 	: "d:/research/segmentation/scale/224_224",
-	"p_root"		: "d:/research/segmentation/segbase",
+	"patient_list" 	: "/home/rensso/research/segmentation/lists/patients.json",
+	"image_root" 	: "/home/rensso/research/segmentation/scale/224_224",
+	"p_root"		: "/home/rensso/research/segmentation/segbase",
 	"img_ext"		: ".ppm",
 	"gt_ext"		: ".png",
 	"p_ext"			: ".pgm",	

@@ -195,18 +195,17 @@ class DbLoader(Dataset):
 ################################################################################
 class DbSegment(Dataset):
     
-    def __init__(self, info = None, dtp = None, lbl = None):
+    def __init__(self, info, dtp = None, lbl = None):
 
         self.data_path_train  = []
         self.data_lbl_train   = []
         self.data_path_test   = []
         self.data_lbl_test    = []
 
-        if info: 
-            self.info = info
-            self.formatInput()
+        self.info = info
+        self.formatInput()
 
-        else:
+        if dtp and lbl:
             self.data_path_train    = dtp
             self.data_lbl_train     = lbl
 
@@ -226,6 +225,7 @@ class DbSegment(Dataset):
             for imgp, gtp, pgm in lst:
                 img_    = Image.open(imgp)
                 gt_     = Image.open(gtp)
+                gt_     = gt_.convert('L')
                 pgm_    = Image.open(pgm)
 
                 img_, gt_ = self.transform(img_, gt_, pgm_, sflag)
