@@ -35,7 +35,7 @@
 	"gt_ext"		: ".png",
 	"p_ext"			: ".pgm",	
 	"nfolds"		: 7,
-	"n_epochs"		: 20
+	"n_epochs"		: 75
   }
   
 	
