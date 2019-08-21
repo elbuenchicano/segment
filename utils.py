@@ -91,6 +91,19 @@ def u_fileNumberMat2array(file_name):
 
 ################################################################################
 ################################################################################
+def u_fileString2DMat2array(file_name, token):
+    print('Loading data from: ' + file_name)
+    F = open(file_name,'r') 
+    lst = []
+    for item in F:
+        if len(item) > 0:
+            item = item.split(token)
+            lst.append(tuple(item))
+    F.close()
+    return lst
+
+################################################################################
+################################################################################
 def u_saveArray2File(file_name, data):
     print('Saving data in: ' + file_name)
     F = open(file_name,'w') 

@@ -3,6 +3,8 @@ import subprocess
 import shlex
 import time
 
+import pickle
+
 from timeit import default_timer as timer
 from PIL import Image
 from utils import *
@@ -227,41 +229,19 @@ def trainModel(general, individual):
         "p_ext"     : p_ext,
         "proot"     : p_root,
         "bypatient" : True,
-        "train"     : True,
         "salience"  : True
     }
 
     batch_size      = 8 
     train_dataset   = DbSegment(info)
-    #test_dataset    = DbSegment(info, train_dataset.data_path_test, train_dataset.data_lbl_test)
-
-
     train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
     u_saveArrayTuple2File(out_dir + 'fold_data_test.lst', train_dataset.data_path_test)
     u_saveArrayTuple2File(out_dir + 'fold_lbl_test.lst', train_dataset.data_lbl_test)
 
-    #train_loader    = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
-
     unet    = UNet(4,1).cuda()
 
-    # unet    = torch.load('pesos.pt').cuda()
-    # unet.eval()
-
     summary(unet, (4, 184, 184), batch_size = batch_size)
-
-    # for i, (img, gt, _) in enumerate(train_loader):
-    #     for j in range(1, len(img)):
-    #         img_    = img[j].cuda()
-    #         gt_     = gt[j].cuda()
-    #         outputs = unet(img_)
-    #         show_tensor(outputs)
-
-    #         npimg = gt_[0].cpu().detach().numpy()
-    
-    #         npimg = np.transpose(npimg, (1, 2, 0) )
-    #         plt.imshow(npimg[:,:,0])
-    #         plt.show()
-
     criterion = torch.nn.MSELoss(reduction='sum').cuda()
     optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
     
@@ -281,9 +261,54 @@ def trainModel(general, individual):
 
                 
                 # Track training progress
-                print ('Epoch: {} \t, {} loss.'.format(epoch, loss))
+                print ('Epoch:{} \t loss{}.'.format(epoch, loss))
 
     torch.save(unet, 'pesos.pt')
+
+################################################################################
+################################################################################
+def testModel(general, individual):
+    path        = general['prefix_path'][general['path_op']]
+    directory   = path + '/' + general['directory']
+
+    model_w     = individual['model']
+    data_path   = individual['data_path']
+    data_label  = individual['data_label']
+
+    out_dir     = directory + '/lists/'
+    
+    #...........................................................................
+    data_path       = u_loadJson(data_path)
+    data_label      = u_fileList2array(data_label)
+
+    info        = {
+        "bypatient" : data_path['bypatient'],
+        "salience"  : data_path['salience']
+    }
+    
+    batch_size      = 8 
+    test_dataset    = DbSegment(info, data_path['data'], data_label)
+    test_loader     = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    
+    unet    = torch.load(model_w).cuda()
+    unet.eval()
+
+    #summary(unet, (4, 184, 184), batch_size = batch_size)
+
+    for i, (img, gt, _) in enumerate(test_loader):
+        for j in range(1, len(img)):
+            img_    = img[j].cuda()
+            gt_     = gt[j].cuda()
+            outputs = unet(img_)
+            show_tensor(outputs)
+
+            npimg = gt_[0].cpu().detach().numpy()
+
+            npimg = np.transpose(npimg, (1, 2, 0) )
+            plt.imshow(npimg[:,:,0])
+            plt.show()
+
+    
 
 ################################################################################
 ################################################################################

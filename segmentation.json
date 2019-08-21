@@ -1,9 +1,9 @@
 {
-  "function": "trainModel",
+  "function": "testModel",
 
   "general": {
 	"directory"	: "research/segmentation",
-        "path_op"	: "linux",
+        "path_op"	: "win",
 	"prefix_path"	: {
 		"win"	      : "d:",
 		"linux"	    : "/home/rensso"
@@ -36,7 +36,11 @@
 	"p_ext"			: ".pgm",	
 	"nfolds"		: 7,
 	"n_epochs"		: 75
+  },
+  "testModel"	: {
+	"model" 		: "pesos.pt",
+	"data_path"		: "d:/research/segmentation/lists/fold_data_test.lst",	
+	"data_label"	: "d:/research/segmentation/lists/fold_lbl_test.lst"
   }
-  
 	
 }

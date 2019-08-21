@@ -203,11 +203,13 @@ class DbSegment(Dataset):
         self.data_lbl_test    = []
 
         self.info = info
-        self.formatInput()
 
         if dtp and lbl:
             self.data_path_train    = dtp
             self.data_lbl_train     = lbl
+
+        else:
+             self.formatInput()
 
     #---------------------------------------------------------------------------
     def __len__(self):
@@ -236,7 +238,8 @@ class DbSegment(Dataset):
             imgp, gtp, pgm  = self.data_path_train[index]
             img     = Image.open(imgp)
             gt      = Image.open(gtp)
-            pgm     = Image.open(pgm)
+            gt      = gt.convert('L')
+            pgm     = Image.open(pgm.strip())
 
             img, gt = self.transform(img, gt, pgm, sflag)
         

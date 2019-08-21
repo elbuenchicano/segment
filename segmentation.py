@@ -12,7 +12,9 @@ def _main():
                  'preprocessingPpm'         : preprocessingPpm,
                  'preprocessingTree'        : preprocessingTree,
                  'createTrainValTestList'   : createTrainValTestList,
-                 'trainModel'               : trainModel
+                 'trainModel'               : trainModel,
+                 'testModel'                : testModel
+
                 }
     
     conf    = u_getPath('segmentation.json')
