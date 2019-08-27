@@ -15,35 +15,7 @@ import matplotlib.pyplot as plt
 import torchvision.transforms.functional as TF
 import torchvision.transforms as T
 
-################################################################################
-################################################################################
-## here the clases or types are divided in folder 
-def ud_MakeDatasetFiles (directory, token, split= (.5, .25, .25), shuffle= True):
 
-    files       = u_listFileAll_(directory, token)
-    # each folder contains one class
-    n_clases    = len(files) 
-    split       = np.array(split)
-
-    train = []
-    valid = [] 
-    test  = []
-
-    #...........................................................................
-    for dir, lfile in files:
-        if shuffle:
-            random.shuffle(lfile)
-
-        bounds  = ( split * len(lfile) ).astype(int)
-        
-        train.append( [ lfile[:bounds[0]], 
-                        os.path.basename(dir) ] )
-        valid.append( [ lfile[bounds[0]: bounds[0] + bounds[1]], 
-                        os.path.basename(dir) ] )
-        test.append( [ lfile[bounds[0] + bounds[1]:], 
-                       os.path.basename(dir) ] )
-
-    return train, valid, test
 
 ################################################################################
 ################################################################################
@@ -81,6 +53,52 @@ def ud_saveDbOrder(file_name, lst):
 
     u_saveDict2File(file_name, info )
     return nfiles 
+
+################################################################################
+################################################################################
+def ud_loadCheckpoint(filepath):
+    checkpoint = torch.load(filepath)
+    model = checkpoint['model']
+    model.load_state_dict(checkpoint['state_dict'])
+    for parameter in model.parameters():
+        parameter.requires_grad = False
+
+    model.eval()
+    return model
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+## here the clases or types are divided in folder 
+def ud_MakeDatasetFiles (directory, token, split= (.5, .25, .25), shuffle= True):
+
+    files       = u_listFileAll_(directory, token)
+    # each folder contains one class
+    n_clases    = len(files) 
+    split       = np.array(split)
+
+    train = []
+    valid = [] 
+    test  = []
+
+    #...........................................................................
+    for dir, lfile in files:
+        if shuffle:
+            random.shuffle(lfile)
+
+        bounds  = ( split * len(lfile) ).astype(int)
+        
+        train.append( [ lfile[:bounds[0]], 
+                        os.path.basename(dir) ] )
+        valid.append( [ lfile[bounds[0]: bounds[0] + bounds[1]], 
+                        os.path.basename(dir) ] )
+        test.append( [ lfile[bounds[0] + bounds[1]:], 
+                       os.path.basename(dir) ] )
+
+    return train, valid, test
 
 ################################################################################
 ################################################################################
@@ -188,6 +206,7 @@ class DbLoader(Dataset):
 
         return image, self.data_labels[index]
 
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -195,32 +214,27 @@ class DbLoader(Dataset):
 ################################################################################
 class DbSegment(Dataset):
     
-    def __init__(self, info, dtp = None, lbl = None):
-
-        self.data_path_train  = []
-        self.data_lbl_train   = []
-        self.data_path_test   = []
-        self.data_lbl_test    = []
-
+    def __init__(self, info):
+        
         self.info = info
 
-        if dtp and lbl:
-            self.data_path_train    = dtp
-            self.data_lbl_train     = lbl
-
-        else:
-             self.formatInput()
+        if not "data_path_train" in self.info:
+            self.info['data_path_train']  = []
+            self.info['data_lbl_train']   = []
+            self.info['data_path_test']   = []
+            self.info['data_lbl_test']    = []
+            self.formatInput()
 
     #---------------------------------------------------------------------------
     def __len__(self):
-        return len(self.data_path_train)
+        return len(self.info['data_path_train'])
     
     #---------------------------------------------------------------------------
     def __getitem__(self, index):
         sflag   = self.info['salience']
             
         if self.info['bypatient']:
-            lst     = self.data_path_train[index]
+            lst     = self.info['data_path_train'][index]
             img     = []
             gt      = []
 
@@ -235,7 +249,7 @@ class DbSegment(Dataset):
                 gt.append(gt_)
             
         else:
-            imgp, gtp, pgm  = self.data_path_train[index]
+            imgp, gtp, pgm  = self.info['data_path_train'][index]
             img     = Image.open(imgp)
             gt      = Image.open(gtp)
             gt      = gt.convert('L')
@@ -243,23 +257,23 @@ class DbSegment(Dataset):
 
             img, gt = self.transform(img, gt, pgm, sflag)
         
-        return img, gt, self.data_lbl_train[index] 
+        return img, gt, self.info['data_lbl_train'][index] 
   
     #---------------------------------------------------------------------------
     ## utils
     def formatInput(self):
-        patients    = self.info['patients']
-        iroot       = self.info['iroot']
-        proot       = self.info['proot']
+        patients    = self.info['patients_pt']
+        iroot       = self.info['iroot_pt']
+        proot       = self.info['proot_pt']
         img_ext     = self.info['img_ext']
         gt_ext      = self.info['gt_ext']
         p_ext       = self.info['p_ext']
         nfolds      = self.info['nfolds']
-        
 
-        data_path       = []
-        data_lbl        = []
+        data_path   = []
+        data_lbl    = []
 
+        patients    = u_loadJson(patients)
         patients_   = sorted(patients)
 
         #......................................................................
@@ -298,12 +312,12 @@ class DbSegment(Dataset):
 
         for f in range(nfolds - 1):
             for i in self.folds[f]:
-                self.data_path_train.append(data_path[i])
-                self.data_lbl_train.append(data_lbl[i])
+                self.info['data_path_train'].append(data_path[i])
+                self.info['data_lbl_train'].append(data_lbl[i])
 
         for i in self.folds[nfolds - 1]:
-            self.data_path_test.append(data_path[i])
-            self.data_lbl_test.append(data_lbl[i])
+            self.info['data_path_test'].append(data_path[i])
+            self.info['data_lbl_test'].append(data_lbl[i])
         
 
     #---------------------------------------------------------------------------
@@ -371,5 +385,21 @@ class DbSegment(Dataset):
 
         #.......................................................................
         return image, mask
-       
- 
+
+    #---------------------------------------------------------------------------
+    # swaping test with train
+    def swap_(self):
+        temp                            = self.info['data_path_train']
+        self.info['data_path_train']    = self.info['data_path_test']
+        self.info['data_path_test']     = temp
+
+        temp                            = self.info['data_lbl_train']
+        self.info['data_lbl_train']     = self.info['data_lbl_test']
+        self.info['data_lbl_test']      = temp
+
+
+################################################################################
+################################################################################
+################################################################################
+
+    

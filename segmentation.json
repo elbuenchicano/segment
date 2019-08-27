@@ -28,19 +28,30 @@
   },
   
   "trainModel" : {
-	"patient_list" 	: "/home/rensso/research/segmentation/lists/patients.json",
-	"image_root" 	: "/home/rensso/research/segmentation/scale/224_224",
-	"p_root"		: "/home/rensso/research/segmentation/segbase",
-	"img_ext"		: ".ppm",
-	"gt_ext"		: ".png",
-	"p_ext"			: ".pgm",	
-	"nfolds"		: 7,
-	"n_epochs"		: 75
+	"train_info_pos"	: 0,
+	"train_info"		:[
+			{
+			"name"			: "unet_info_01",
+			"patients_pt"	: "research/segmentation/lists/patients.json",
+			"iroot_pt"		: "research/segmentation/scale/224_224",
+			"proot_pt"		: "research/segmentation/segbase",
+			"bypatient"		: 1,
+			"salience"		: 1,
+			"img_ext"		: ".ppm",
+			"gt_ext"		: ".png",
+			"p_ext"			: ".pgm",	
+			"nfolds"		: 7
+			},
+			"research/segmentation/lists/train_info.inf"
+		],
+	"n_epochs"		: 3,
+	"save_step"		: 1,
+	"batch_size"	: 8,
+	"model_name"	: "unet"
   },
   "testModel"	: {
-	"model" 		: "pesos.pt",
-	"data_path"		: "d:/research/segmentation/lists/fold_data_test.lst",	
-	"data_label"	: "d:/research/segmentation/lists/fold_lbl_test.lst"
+	"model" 		: "d:/research/segmentation/models/unet_info_01/epoch_0.pth",
+	"info_pt"		: "d:/research/segmentation/lists/unet_info_01.json"
   }
 	
 }

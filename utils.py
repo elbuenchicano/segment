@@ -257,3 +257,13 @@ def u_fillVecToken(names, token = ' '):
 def u_joinPath(names):
     return u_fillVecToken(names, '/')
 
+################################################################################
+################################################################################
+def u_look4PtInDict(dict_, root):
+       for item in dict_:
+           if item.find('_pt') > -1:
+            dict_[item] = u_joinPath([root, dict_[item]])
+
+
+
+

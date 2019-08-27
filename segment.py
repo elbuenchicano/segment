@@ -204,52 +204,42 @@ def trainModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
 
-    patient_list    = individual['patient_list']
-    nfolds          = individual['nfolds']
-    image_root      = individual['image_root']
-    p_root          = individual['p_root']
+    if not individual['train_info_pos']:
+        train_info  = individual['train_info'][individual['train_info_pos']]
+    else:
+        train_info = u_loadJson(
+                        individual['train_info'][individual['train_info_pos']])
 
-    img_ext         = individual['img_ext']
-    gt_ext          = individual['gt_ext']
-    p_ext           = individual['p_ext']
-   
-    n_epochs        = individual['n_epochs']
+    n_epochs    = individual['n_epochs']
+    save_step   = individual['save_step']
+    batch_size  = individual['batch_size']
 
-    out_dir         = directory + '/lists/'
+    #...........................................................................
+    out_dir     = directory + '/lists/'
+    out_dir_w   = directory + '/models/' + train_info['name'] + '/'    
+    
+    u_mkdir(out_dir)
+    u_mkdir(out_dir_w)
     
     #...........................................................................
-    patients    = u_loadJson(patient_list)   
+    u_look4PtInDict(train_info, path)
 
-    info        = {
-        "patients"  : patients,
-        "nfolds"    : nfolds,
-        "iroot"     : image_root,
-        "img_ext"   : img_ext,
-        "gt_ext"    : gt_ext,
-        "p_ext"     : p_ext,
-        "proot"     : p_root,
-        "bypatient" : True,
-        "salience"  : True
-    }
-
-    batch_size      = 8 
-    train_dataset   = DbSegment(info)
+    train_dataset   = DbSegment(train_info)
     train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    u_saveArrayTuple2File(out_dir + 'fold_data_test.lst', train_dataset.data_path_test)
-    u_saveArrayTuple2File(out_dir + 'fold_lbl_test.lst', train_dataset.data_lbl_test)
-
+    if not individual['train_info_pos']:
+        u_saveDict2File(out_dir + train_info['name'] + '.json', train_dataset.info)
+    
     unet    = UNet(4,1).cuda()
-
     summary(unet, (4, 184, 184), batch_size = batch_size)
+
     criterion = torch.nn.MSELoss(reduction='sum').cuda()
     optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
     
-
+    #...........................................................................
     for epoch in range(n_epochs):
         for i, (img, gt, _) in enumerate(train_loader):
             for j in range(1, len(img)):
-           
                 img_    = img[j].cuda()
                 gt_     = gt[j].cuda()
 
@@ -258,12 +248,20 @@ def trainModel(general, individual):
                 optimizer.zero_grad()       
                 loss.backward()
                 optimizer.step()
-
                 
                 # Track training progress
                 print ('Epoch:{} \t loss{}.'.format(epoch, loss))
 
-    torch.save(unet, 'pesos.pt')
+        if not (epoch+1) % save_step:
+            checkpoint = {  'model': UNet(4,1).cuda(),
+                        'state_dict': unet.state_dict(),
+                        'optimizer' : optimizer.state_dict()}
+
+            torch.save(checkpoint, out_dir_w + 'epoch_' + str(epoch) + '.pth')
+
+    torch.save(checkpoint, out_dir_w + 'final.pth')
+
+
 
 ################################################################################
 ################################################################################
@@ -271,50 +269,47 @@ def testModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
 
-    model_w     = individual['model']
-    data_path   = individual['data_path']
-    data_label  = individual['data_label']
+    model_pt    = individual['model']
+    info        = u_loadJson(individual['info_pt'])
 
-    out_dir     = directory + '/lists/'
-    
+    out_dir     = directory + '/outputs/' +  info['name'] + '/'
+    u_mkdir(out_dir)
+
     #...........................................................................
-    data_path       = u_loadJson(data_path)
-    data_label      = u_fileList2array(data_label)
-
-    info        = {
-        "bypatient" : data_path['bypatient'],
-        "salience"  : data_path['salience']
-    }
+    test_dataset    = DbSegment(info)
+    test_dataset.swap_()
+    test_loader     = DataLoader(test_dataset, batch_size=1, shuffle=True)
     
-    batch_size      = 8 
-    test_dataset    = DbSegment(info, data_path['data'], data_label)
-    test_loader     = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
-    
-    unet    = torch.load(model_w).cuda()
-    unet.eval()
+    unet            = ud_loadCheckpoint(model_pt)
+    summary(unet, (4, 184, 184))
 
-    #summary(unet, (4, 184, 184), batch_size = batch_size)
-
-    for i, (img, gt, _) in enumerate(test_loader):
-        for j in range(1, len(img)):
+    for i, (img, gt, lbl) in enumerate(test_loader):
+        for j in range(0, len(img)):
             img_    = img[j].cuda()
             gt_     = gt[j].cuda()
             outputs = unet(img_)
-            show_tensor(outputs)
-
-            npimg = gt_[0].cpu().detach().numpy()
-
-            npimg = np.transpose(npimg, (1, 2, 0) )
-            plt.imshow(npimg[:,:,0])
-            plt.show()
-
-    
-
+            #show_tensor(outputs)
+            #show_tensor(gt_)
+            file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
+            save_tensor_batch(file_name, outputs)
+            
 ################################################################################
 ################################################################################
 def show_tensor(img):
     npimg = img[0].cpu().detach().numpy()
-    
     npimg = np.transpose(npimg, (1, 2, 0) )
     plt.imshow(npimg[:,:,0])
     plt.show()
+
+################################################################################
+################################################################################
+def save_tensor_batch(file_name, img):
+    print('File saved in :', file_name)
+    for im in img:
+        x   = im.cpu().detach().numpy()
+        x   = np.transpose(x, (1, 2, 0) )[:,:,0]
+        xmax, xmin = x.max(), x.min()
+        x   = (x - xmin)/(xmax - xmin)*255
+        x   = Image.fromarray(x).convert('L')
+        x.save(file_name)
+    
