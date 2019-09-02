@@ -3,7 +3,7 @@
 
   "general": {
 	"directory"	: "research/segmentation",
-        "path_op"	: "win",
+        "path_op"	: "linux",
 	"prefix_path"	: {
 		"win"	      : "d:",
 		"linux"	    : "/home/rensso"
