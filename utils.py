@@ -91,6 +91,7 @@ def u_fileNumberMat2array(file_name):
 
 ################################################################################
 ################################################################################
+''' save string matrix estructure into file'''
 def u_fileString2DMat2array(file_name, token):
     print('Loading data from: ' + file_name)
     F = open(file_name,'r') 
@@ -211,18 +212,20 @@ def u_loadFileManager(directive, token = ''):
 
 ################################################################################
 ################################################################################
+''' console bar animation of process'''
 def u_progress(count, total, status=''):
     bar_len = 60
     filled_len = int(round(bar_len * count / float(total)))
 
     percents = round(100.0 * count / float(total), 1)
-    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+    bar = '>' * filled_len + '-' * (bar_len - filled_len)
 
     sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
     sys.stdout.flush() 
     
 ################################################################################
 ################################################################################
+''' init a list with different list'''
 def u_init_list_of_objects(size):
     list_of_objects = list()
     for i in range(0,size):
@@ -231,6 +234,7 @@ def u_init_list_of_objects(size):
 
 ################################################################################
 ################################################################################
+''' replace string in a list of strings'''
 def u_replaceStrList(str_list, token1, token2):
     for i in range(len(str_list)):
         str_list = str_list.replace(token1, token2)
@@ -238,6 +242,7 @@ def u_replaceStrList(str_list, token1, token2):
 
 ################################################################################
 ################################################################################
+''' split string by alfanumerical'''
 def u_stringSplitByNumbers(x):
     r = re.compile('(\d+)')
     l = r.split(x)
@@ -245,6 +250,7 @@ def u_stringSplitByNumbers(x):
 
 ################################################################################
 ################################################################################
+''' join string vector in only one string using a defined token'''
 def u_fillVecToken(names, token = ' '):
     ans = names[0]
     for i in range(1, len(names)):
@@ -254,11 +260,13 @@ def u_fillVecToken(names, token = ' '):
 
 ################################################################################
 ################################################################################
+''' os  similar to joinpath of python os'''
 def u_joinPath(names):
     return u_fillVecToken(names, '/')
 
 ################################################################################
 ################################################################################
+''' change into values for determinate key that contains token _pt '''
 def u_look4PtInDict(dict_, root):
        for item in dict_:
            if item.find('_pt') > -1:

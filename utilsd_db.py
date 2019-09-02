@@ -57,14 +57,46 @@ def ud_saveDbOrder(file_name, lst):
 ################################################################################
 ################################################################################
 def ud_loadCheckpoint(filepath):
-    checkpoint = torch.load(filepath)
-    model = checkpoint['model']
-    model.load_state_dict(checkpoint['state_dict'])
+    checkpoint      = torch.load(filepath)
+    model           = checkpoint['model']
+    optimizer       = checkpoint['optimizer']
+    epoch           = checkpoint['epoch']
+    losslogger      = checkpoint['losslogger'] 
+    criterion       = checkpoint['criterion'] 
+
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+    for parameter in model.parameters():
+        parameter.requires_grad = True
+    
+    model.eval()
+
+    return model, optimizer, epoch, losslogger, criterion
+
+################################################################################
+################################################################################
+def ud_loadModel(filepath):
+    checkpoint      = torch.load(filepath)
+    model           = checkpoint['model']
+    model.load_state_dict(checkpoint['model_state_dict'])
+
     for parameter in model.parameters():
         parameter.requires_grad = False
 
     model.eval()
+
     return model
+
+################################################################################
+################################################################################
+def ud_plotLoss(dir, loss_list):
+    plt.plot(loss_list)
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.savefig(dir + 'loss_plot.png', bbox_inches='tight')
+    plt.show()
+
 
 ################################################################################
 ################################################################################
