@@ -143,7 +143,7 @@ def u_saveArrayTuple2File(file_name, data):
 Save dict into file, recommendably [.json]
 '''
 def u_saveDict2File(file_name, data):
-    print ('Saving data in: ', file_name)
+    print ('Saving Dict data in: ', file_name)
     with open(file_name, 'w') as outfile:  
         json.dump(data, outfile)
 

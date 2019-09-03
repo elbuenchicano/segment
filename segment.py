@@ -197,19 +197,25 @@ def trainModel(general, individual):
     directory   = path + '/' + general['directory']
 
     if not individual['train_info_pos']:
-        train_info  = individual['train_info'][individual['train_info_pos']]
+        train_info      = individual['train_info'][individual['train_info_pos']]
     else:
-        train_info = individual['train_info'][individual['train_info_pos']]
-        train_info = u_loadJson(path + '/' + train_info)
+        train_info_file = individual['train_info'][individual['train_info_pos']]
+        train_info      = u_loadJson(path + '/' + train_info_file)
 
     n_epochs    = individual['n_epochs']
     save_step   = individual['save_step']
     batch_size  = individual['batch_size']
     chk_point   = individual['chk_point']
+    model_name  = individual['model_name']
+
+    model_list  = {
+        'unet_salience'     : [UNet(4,1), True],
+        'unet_vanilla'      : [UNet(3,1), False],
+        }
     
     #...........................................................................
     out_dir     = directory + '/lists/'
-    out_dir_w   = directory + '/models/' + train_info['name'] + '/'    
+    out_dir_w   = directory + '/models/' + model_name + '/'    
     
     u_mkdir(out_dir)
     u_mkdir(out_dir_w)
@@ -217,34 +223,32 @@ def trainModel(general, individual):
     #...........................................................................
     if not chk_point[0]:
         u_look4PtInDict(train_info, path)
-        train_dataset   = DbSegment(train_info)
+        train_dataset   = DbSegment(train_info, model_list[model_name][1])
         train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         if not individual['train_info_pos']:
-            u_saveDict2File(out_dir + train_info['name'] + '.json', train_dataset.info)
+            train_info_file = out_dir + train_info['name'] + '.json', train_dataset.info
+            u_saveDict2File(train_info_file)
         
         i_epoch         = 0
         loss_list       = []
-        unet            = UNet(4,1).cuda()
-        criterion       = torch.nn.MSELoss(reduction='sum').cuda()
-        optimizer       = torch.optim.Adam(unet.parameters(), lr=1e-4)
-        
+        unet            = model_list[model_name][0].cuda()
         
     else: #.....................................................................
-        train_dataset   = DbSegment(train_info)
+        train_dataset   = DbSegment(train_info, model_list[model_name][1])
         train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         
         unet, optimizer, i_epoch, loss_list, criterion = ud_loadCheckpoint(out_dir_w + str(chk_point[1]) + '.pth')
-        unet            = unet.cuda()
+        unet            = model_list[model_name][0].cuda()
         criterion       = criterion.cuda()
         
     #...........................................................................        
-    summary(unet, (4, 184, 184), batch_size = batch_size)
+    summary(unet, (unet.in_channel, 184, 184), batch_size = batch_size)
         
     #...........................................................................
     criterion       = torch.nn.MSELoss(reduction='sum').cuda()
     optimizer       = torch.optim.Adam(unet.parameters(), lr=1e-4)
-    #unet            = UNet(4,1).cuda()
+    
 
     for epoch in range(i_epoch, n_epochs):
         for i, (img, gt, _) in enumerate(train_loader):
@@ -266,7 +270,7 @@ def trainModel(general, individual):
 
         if not (epoch+1) % save_step:
             state = {
-                        'model'                 : UNet(4,1),
+                        'model'                 : model_list[model_name],
                         'optimizer'             : torch.optim.Adam(unet.parameters(), lr=1e-4),
                         'criterion'             : torch.nn.MSELoss(reduction='sum'),
                         'epoch'                 : epoch,
@@ -276,12 +280,21 @@ def trainModel(general, individual):
 
             torch.save(state, out_dir_w + str(epoch) + '.pt')
 
-    state= {'model'         : UNet(4,1).cuda(),
-            'state_dict'    : unet.state_dict()
+    state= {'model'             : model_list[model_name].cuda(),
+            'state_dict'  : unet.state_dict()
            }
-    torch.save(state, out_dir_w + 'final.pt')
 
+    model_file_out =  out_dir_w + 'final.pt'
+    torch.save(state, model_file_out)
     ud_plotLoss(out_dir_w,  loss_list)
+    
+    train_data = {
+        'model_name'        : model_name,
+        'final_model_pt'    : model_file_out.replace(path, ''),
+        'train_info_pt'     : train_info_file.replace(path, ''),
+        'salience'          : model_list[model_name][1]
+        }
+    u_saveDict2File(out_dir_w + 'train_data.json', train_data)
 
 ################################################################################
 ################################################################################
@@ -289,31 +302,35 @@ def testModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
 
-    model_pt    = individual['model']
-    info        = u_loadJson(individual['info_pt'])
+    train_data  = u_loadJson(path + '/' + individual['train_data'])
+    u_look4PtInDict(train_data, path)
 
-    out_dir     = directory + '/outputs/' +  info['name'] + '/'
+    model_name  = train_data['model_name']     
+    train_info  = u_loadJson(train_data['train_info_pt']) 
+    model_file  = train_data['final_model_pt']     
+    salience    = train_data['salience']     
+
+    
+    out_dir     = directory + '/outputs/' + model_name + '/'
     u_mkdir(out_dir)
 
     #...........................................................................
-    test_dataset    = DbSegment(info)
+    test_dataset    = DbSegment(train_info, salience)
     test_dataset.swap_()
     test_loader     = DataLoader(test_dataset, batch_size=1, shuffle=True)
     
-    unet            = ud_loadModel(model_pt)
+    unet            = ud_loadModel(model_file)
     unet            = unet.cuda()
-
-    summary(unet, (4, 184, 184))
 
     for i, (img, gt, lbl) in enumerate(test_loader):
         for j in range(0, len(img)):
             img_    = img[j].cuda()
             gt_     = gt[j].cuda()
             outputs = unet(img_)
-            #show_tensor(outputs)
+            show_tensor(outputs)
             show_tensor(gt_)
-            file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
-            save_tensor_batch(file_name, outputs)
+#            file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
+#            save_tensor_batch(file_name, outputs)
             
 ################################################################################
 ################################################################################

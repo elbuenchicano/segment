@@ -20,6 +20,7 @@ from utilsd_db import *
 ######################## SEGMENTATION CLASS #####################################
 class UNet(nn.Module):
     def contracting_block(self, in_channels, out_channels, kernel_size=3):
+     
         block = torch.nn.Sequential(
                     torch.nn.Conv2d(kernel_size=kernel_size, in_channels=in_channels, out_channels=out_channels, padding = 1),
                     torch.nn.ReLU(),
@@ -76,9 +77,10 @@ class UNet(nn.Module):
                             torch.nn.ConvTranspose2d(in_channels=512, out_channels=256, kernel_size=3, stride=2, padding=1, output_padding=1)
                             )
         # Decode
-        self.conv_decode3 = self.expansive_block(512, 256, 128)
-        self.conv_decode2 = self.expansive_block(256, 128, 64)
-        self.final_layer = self.final_block(128, 64, out_channel)
+        self.conv_decode3   = self.expansive_block(512, 256, 128)
+        self.conv_decode2   = self.expansive_block(256, 128, 64)
+        self.final_layer    = self.final_block(128, 64, out_channel)
+        self.in_channel     = in_channel 
         
     def crop_and_concat(self, upsampled, bypass, crop=False):
         if crop:
@@ -104,3 +106,11 @@ class UNet(nn.Module):
         decode_block1 = self.crop_and_concat(cat_layer1, encode_block1, crop=True)
         final_layer = self.final_layer(decode_block1)
         return  final_layer
+
+
+#################################################################################
+#################################################################################
+######################## SEGMENTATION CLASS LSTM ################################
+
+
+

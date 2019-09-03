@@ -79,7 +79,7 @@ def ud_loadCheckpoint(filepath):
 def ud_loadModel(filepath):
     checkpoint      = torch.load(filepath)
     model           = checkpoint['model']
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint['state_dict'])
 
     for parameter in model.parameters():
         parameter.requires_grad = False
@@ -246,9 +246,10 @@ class DbLoader(Dataset):
 ################################################################################
 class DbSegment(Dataset):
     
-    def __init__(self, info):
+    def __init__(self, info, salience_flag):
         
-        self.info = info
+        self.info       = info
+        self.salience   = salience_flag 
 
         if not "data_path_train" in self.info:
             self.info['data_path_train']  = []
@@ -263,7 +264,6 @@ class DbSegment(Dataset):
     
     #---------------------------------------------------------------------------
     def __getitem__(self, index):
-        sflag   = self.info['salience']
             
         if self.info['bypatient']:
             lst     = self.info['data_path_train'][index]
@@ -276,7 +276,7 @@ class DbSegment(Dataset):
                 gt_     = gt_.convert('L')
                 pgm_    = Image.open(pgm)
 
-                img_, gt_ = self.transform(img_, gt_, pgm_, sflag)
+                img_, gt_ = self.transform(img_, gt_, pgm_, self.salience)
                 img.append(img_)
                 gt.append(gt_)
             
@@ -287,7 +287,7 @@ class DbSegment(Dataset):
             gt      = gt.convert('L')
             pgm     = Image.open(pgm.strip())
 
-            img, gt = self.transform(img, gt, pgm, sflag)
+            img, gt = self.transform(img, gt, pgm, self.salience)
         
         return img, gt, self.info['data_lbl_train'][index] 
   

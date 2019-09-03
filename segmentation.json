@@ -3,7 +3,7 @@
 
   "general": {
 	"directory"	: "research/segmentation",
-        "path_op"	: "linux",
+        "path_op"	: "win",
 	"prefix_path"	: {
 		"win"	      : "d:",
 		"linux"	    : "/home/rensso"
@@ -28,7 +28,7 @@
   },
   
   "trainModel" : {
-	"train_info_pos"	: 0,
+	"train_info_pos"	: 1,
 	"train_info"		:[
 			{
 			"name"			: "unet_info_01",
@@ -36,7 +36,6 @@
 			"iroot_pt"		: "research/segmentation/scale/224_224",
 			"proot_pt"		: "research/segmentation/segbase",
 			"bypatient"		: 1,
-			"salience"		: 1,
 			"img_ext"		: ".ppm",
 			"gt_ext"		: ".png",
 			"p_ext"			: ".pgm",	
@@ -44,15 +43,14 @@
 			},
 			"research/segmentation/lists/unet_info_01.json"
 		],
-	"n_epochs"		: 75,
-	"save_step"		: 5,
+	"n_epochs"		: 10,
+	"save_step"		: 3,
 	"batch_size"	: 8,
-	"model_name"	: "unet",
+	"model_name"	: "unet_vanilla",
 	"chk_point"		: [0, 4]
   },
   "testModel"	: {
-	"model" 		: "d:/research/segmentation/models/unet_info_01/9.pth",
-	"info_pt"		: "d:/research/segmentation/lists/unet_info_01.json"
+	"train_data"	: "research/segmentation/models/unet_info_01/train_data.json"
   }
 	
 }
