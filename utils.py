@@ -6,7 +6,18 @@ import json
 import re
 import random 
 import numpy as np
+from sys import platform
 
+
+################################################################################
+################################################################################
+def u_whichOS():
+    if platform == "linux" or platform == "linux2":
+        return 'linux'
+    elif platform == "darwin":
+        return 'mac'
+    elif platform == "win32":
+        return 'win'
 
 ################################################################################
 ################################################################################

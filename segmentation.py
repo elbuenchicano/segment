@@ -17,8 +17,10 @@ def _main():
 
                 }
     
-    conf    = u_getPath('segmentation.json')
-    confs   = json.load(open(conf))
+    conf                = u_getPath('segmentation.json')
+    confs               = json.load(open(conf))
+
+    confs['general']['path_op']    = u_whichOS()
 
     #...........................................................................
     print(confs['function'])
