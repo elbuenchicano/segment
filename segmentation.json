@@ -1,5 +1,5 @@
 {
-  "function": "testModel",
+  "function": "trainModel",
 
   "general": {
 	"directory"	: "research/segmentation",
@@ -42,8 +42,8 @@
 			},
 			"research/segmentation/lists/unet_info_01.json"
 		],
-	"n_epochs"		: 10,
-	"save_step"		: 3,
+	"n_epochs"		: 75,
+	"save_step"		: 5,
 	"batch_size"	: 8,
 	"model_name"	: "unet_salience",
 	"chk_point"		: [0, 4]
