@@ -246,10 +246,14 @@ class DbLoader(Dataset):
 ################################################################################
 class DbSegment(Dataset):
     
-    def __init__(self, info, salience_flag):
+    def __init__(self, info, salience_flag, train_flag=True, random_prob=0.5):
         
-        self.info       = info
-        self.salience   = salience_flag 
+        self.random_prob    = random_prob
+        self.info           = info
+        self.salience       = salience_flag 
+
+        self.step           = 0
+        self.side           = 224
 
         if not "data_path_train" in self.info:
             self.info['data_path_train']  = []
@@ -258,13 +262,17 @@ class DbSegment(Dataset):
             self.info['data_lbl_test']    = []
             self.formatInput()
 
+        if train_flag:
+            self.transform = self.transform_data_aug
+        else:
+            self.transform = self.transform_normal
+
     #---------------------------------------------------------------------------
     def __len__(self):
         return len(self.info['data_path_train'])
     
     #---------------------------------------------------------------------------
     def __getitem__(self, index):
-            
         if self.info['bypatient']:
             lst     = self.info['data_path_train'][index]
             img     = []
@@ -353,25 +361,22 @@ class DbSegment(Dataset):
         
 
     #---------------------------------------------------------------------------
-    def transform(self, image, mask, sali, sflag):
+    def transform_data_aug(self, image, mask, sali, sflag):
         mask  = mask.convert('RGB')
-
-        step = 40 
-        side = 184
 
         #.......................................................................
         if not sflag:
             # crop image
-            image   = TF.crop(image, step, step, side, side)
-            mask    = TF.crop(mask, step, step, side, side)
+            image   = TF.crop(image, self.step, self.step, self.side, self.side)
+            mask    = TF.crop(mask, self.step, self.step, self.side, self.side)
             
             # Random horizontal flipping
-            if random.random() > 0.5:
+            if random.random() > self.random_prob:
                 image   = TF.hflip(image)
                 mask    = TF.hflip(mask)                  
 
             # Random rotation
-            if random.random() > 0.5:
+            if random.random() > self.random_prob:
                 angle   = random.random() * 15
                 image   = TF.rotate(image, angle)
                 mask    = TF.rotate(mask, angle)
@@ -383,24 +388,24 @@ class DbSegment(Dataset):
         #.......................................................................
         else:
             # crop image
-            image   = TF.crop(image, step, step, side, side)
-            mask    = TF.crop(mask, step, step, side, side)
+            image   = TF.crop(image, self.step, self.step, self.side, self.side)
+            mask    = TF.crop(mask, self.step, self.step, self.side, self.side)
 
             resize  = T.Resize(size=(224, 224))
             sali    = sali.convert('L')
             sali    = sali.filter(ImageFilter.MaxFilter(5))
             sali    = resize(sali)
-            sali    = TF.crop(sali, step, step, side, side)
+            sali    = TF.crop(sali, self.step, self.step, self.side, self.side)
             
             
             # Random horizontal flipping
-            if random.random() > 0.5:
+            if random.random() > self.random_prob:
                 image   = TF.hflip(image)
                 mask    = TF.hflip(mask)                  
                 sali    = TF.hflip(sali)                  
 
             # Random rotation
-            if random.random() > 0.5:
+            if random.random() > self.random_prob:
                 angle   = random.random() * 15
                 image   = TF.rotate(image, angle)
                 mask    = TF.rotate(mask, angle)
@@ -408,6 +413,42 @@ class DbSegment(Dataset):
 
             
     
+            # Transform to tensor
+            image   = TF.to_tensor(image)
+            mask    = TF.to_tensor(mask)
+            sali    = TF.to_tensor(sali)
+
+            image   = torch.cat((image, sali), dim = 0)
+
+        #.......................................................................
+        return image, mask
+
+    #---------------------------------------------------------------------------
+    def transform_normal(self, image, mask, sali, sflag):
+        mask  = mask.convert('RGB')
+        
+        #.......................................................................
+        if not sflag:
+            # crop image
+            image   = TF.crop(image, self.step, self.step, self.side, self.side)
+            mask    = TF.crop(mask, self.step, self.step, self.side, self.side)
+                        
+            # Transform to tensor
+            image   = TF.to_tensor(image)
+            mask    = TF.to_tensor(mask)
+
+        #.......................................................................
+        else:
+            # crop image
+            image   = TF.crop(image, self.step, self.step, self.side, self.side)
+            mask    = TF.crop(mask, self.step, self.step, self.side, self.side)
+
+            resize  = T.Resize(size=(224, 224))
+            sali    = sali.convert('L')
+            sali    = sali.filter(ImageFilter.MaxFilter(5))
+            sali    = resize(sali)
+            sali    = TF.crop(sali, self.step, self.step, self.side, self.side)
+            
             # Transform to tensor
             image   = TF.to_tensor(image)
             mask    = TF.to_tensor(mask)

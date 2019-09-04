@@ -45,11 +45,11 @@
 	"n_epochs"		: 10,
 	"save_step"		: 3,
 	"batch_size"	: 8,
-	"model_name"	: "unet_vanilla",
+	"model_name"	: "unet_salience",
 	"chk_point"		: [0, 4]
   },
   "testModel"	: {
-	"train_data"	: "research/segmentation/models/unet_info_01/train_data.json"
+	"train_data"	: "research/segmentation/models/unet_salience/train_data.json"
   }
 	
 }

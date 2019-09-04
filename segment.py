@@ -270,7 +270,7 @@ def trainModel(general, individual):
 
         if not (epoch+1) % save_step:
             state = {
-                        'model'                 : model_list[model_name],
+                        'model'                 : model_list[model_name][0],
                         'optimizer'             : torch.optim.Adam(unet.parameters(), lr=1e-4),
                         'criterion'             : torch.nn.MSELoss(reduction='sum'),
                         'epoch'                 : epoch,
@@ -280,7 +280,7 @@ def trainModel(general, individual):
 
             torch.save(state, out_dir_w + str(epoch) + '.pt')
 
-    state= {'model'             : model_list[model_name].cuda(),
+    state= {'model'       : model_list[model_name][0],
             'state_dict'  : unet.state_dict()
            }
 
@@ -315,7 +315,7 @@ def testModel(general, individual):
     u_mkdir(out_dir)
 
     #...........................................................................
-    test_dataset    = DbSegment(train_info, salience)
+    test_dataset    = DbSegment(train_info, salience, False)
     test_dataset.swap_()
     test_loader     = DataLoader(test_dataset, batch_size=1, shuffle=True)
     
@@ -328,8 +328,11 @@ def testModel(general, individual):
             img_    = img[j].cuda()
             gt_     = gt[j].cuda()
             outputs = unet(img_)
-#            show_tensor(outputs)
-#            show_tensor(gt_)
+
+            #show_tensor(img_)
+            #show_tensor(gt_)
+            #show_tensor(outputs)
+
             file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
             save_tensor_batch(file_name, outputs)
             
@@ -350,6 +353,9 @@ def save_tensor_batch(file_name, img):
         x   = np.transpose(x, (1, 2, 0) )[:,:,0]
         xmax, xmin = x.max(), x.min()
         x   = (x - xmin)/(xmax - xmin)*255
+        #x   = np.pad(x, pad_width=20, mode='constant', constant_values=0)
+        #plt.imshow(x)
+        #plt.show()
         x   = Image.fromarray(x).convert('L')
         x.save(file_name)
     
