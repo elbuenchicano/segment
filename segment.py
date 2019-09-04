@@ -323,14 +323,15 @@ def testModel(general, individual):
     unet            = unet.cuda()
 
     for i, (img, gt, lbl) in enumerate(test_loader):
+        u_progress(i, len(test_loader))
         for j in range(0, len(img)):
             img_    = img[j].cuda()
             gt_     = gt[j].cuda()
             outputs = unet(img_)
-            show_tensor(outputs)
-            show_tensor(gt_)
-#            file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
-#            save_tensor_batch(file_name, outputs)
+#            show_tensor(outputs)
+#            show_tensor(gt_)
+            file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
+            save_tensor_batch(file_name, outputs)
             
 ################################################################################
 ################################################################################
