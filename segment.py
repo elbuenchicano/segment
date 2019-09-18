@@ -12,6 +12,11 @@ from utilsd_db import *
 from torchvision import transforms, utils
 from model import *
 
+import torchvision.transforms as T
+
+from sklearn.cluster import KMeans
+
+
 ################################################################################
 ################################################################################
 # This function Reads all files in png format from a especific directory, 
@@ -250,6 +255,7 @@ def trainModel(general, individual):
     optimizer       = torch.optim.Adam(unet.parameters(), lr=1e-4)
     
 
+
     for epoch in range(i_epoch, n_epochs):
         for i, (img, gt, _) in enumerate(train_loader):
             for j in range(1, len(img)):
@@ -302,6 +308,8 @@ def testModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
 
+    original_gt = individual['original_gt']
+
     train_data  = u_loadJson(path + '/' + individual['train_data'])
     u_look4PtInDict(train_data, path)
 
@@ -324,17 +332,37 @@ def testModel(general, individual):
 
     for i, (img, gt, lbl) in enumerate(test_loader):
         u_progress(i, len(test_loader))
+
+        im      = Image.open(original_gt + '/' + lbl[0] + '_gt_0.png')
+        w, h    = im.size
+
         for j in range(0, len(img)):
             img_    = img[j].cuda()
             gt_     = gt[j].cuda()
             outputs = unet(img_)
+
+            resize  = T.Resize(size=(h, w))
+
+            npimg   = outputs[0].cpu().detach().numpy()
+            npimg   = np.transpose(npimg, (1, 2, 0) )
+
+            npimg   = npimg.reshape(-1, 1)
+
+            kmeans  = KMeans(n_clusters=4, init='k-means++', max_iter=300, n_init=10)
+            
+            kmeans.fit(npimg) 
+            out     = kmeans.predict(npimg)
+            out     = (out.reshape(224,224) /4 )* 255  
+                                          
+            out     = Image.fromarray(out)
+            out     = resize(out).convert('L')
 
             #show_tensor(img_)
             #show_tensor(gt_)
             #show_tensor(outputs)
 
             file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
-            save_tensor_batch(file_name, outputs)
+            out.save(file_name)
             
 ################################################################################
 ################################################################################

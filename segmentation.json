@@ -1,5 +1,5 @@
 {
-  "function": "trainModel",
+  "function": "testModel",
 
   "general": {
 	"directory"	: "research/segmentation",
@@ -42,14 +42,15 @@
 			},
 			"research/segmentation/lists/unet_info_01.json"
 		],
-	"n_epochs"		: 75,
+	"n_epochs"		: 10,
 	"save_step"		: 5,
 	"batch_size"	: 8,
-	"model_name"	: "unet_salience",
+	"model_name"	: "unet_vanilla",
 	"chk_point"		: [0, 4]
   },
   "testModel"	: {
-	"train_data"	: "research/segmentation/models/unet_salience/train_data.json"
+	"train_data"	: "research/segmentation/models/unet_vanilla/train_data.json",
+	"original_gt"	: "D:/datasets/image_files"
   }
 	
 }

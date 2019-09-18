@@ -110,7 +110,21 @@ class UNet(nn.Module):
 
 #################################################################################
 #################################################################################
-######################## SEGMENTATION CLASS LSTM ################################
+######################## SEGMENTATION CLASS GRU# ################################
+class FeatExtract(nn.Module):
+    def __init__(self, backend):
+        super(FeatExtract, self).__init__()
+        #backends = {
+        #    'resnet18' : torch.hub.load('pytorch/vision', 'resnet18', pretrained=False)
+        #    }
+        #self.net = backends[backend]
+        #summary(self.net, (224,224,3))
+               
+        
 
+
+#################################################################################
+class SoftPsp(nn.Module):
+    pass
 
 

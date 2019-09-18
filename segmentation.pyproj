@@ -25,6 +25,9 @@
     <Compile Include="model.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="model_resnet.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="segment.py">
       <SubType>Code</SubType>
     </Compile>

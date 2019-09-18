@@ -40,10 +40,10 @@ def u_fileList2array(file_name):
 
 ################################################################################
 ################################################################################
-'''
-It loads data from file list which has the first row as the main root
-'''
 def u_fileList2array_(file_name):
+    '''
+    It loads data from file list which has the first row as the main root
+    '''
     print('Loading data from: ' + file_name)
     F       = open(file_name,'r') 
     root    = F.readline().strip() 
@@ -245,8 +245,8 @@ def u_init_list_of_objects(size):
 
 ################################################################################
 ################################################################################
-''' replace string in a list of strings'''
 def u_replaceStrList(str_list, token1, token2):
+    ''' replace string in a list of strings'''
     for i in range(len(str_list)):
         str_list = str_list.replace(token1, token2)
     return str_list
