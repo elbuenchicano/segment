@@ -308,7 +308,7 @@ def testModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
 
-    original_gt = individual['original_gt']
+    original_gt = path + '/' + individual['original_gt']
 
     train_data  = u_loadJson(path + '/' + individual['train_data'])
     u_look4PtInDict(train_data, path)

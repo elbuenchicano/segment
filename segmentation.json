@@ -50,7 +50,7 @@
   },
   "testModel"	: {
 	"train_data"	: "research/segmentation/models/unet_vanilla/train_data.json",
-	"original_gt"	: "D:/datasets/image_files"
+	"original_gt"	: "datasets/image_files"
   }
 	
 }
