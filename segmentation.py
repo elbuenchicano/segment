@@ -13,7 +13,8 @@ def _main():
                  'preprocessingTree'        : preprocessingTree,
                  'createTrainValTestList'   : createTrainValTestList,
                  'trainModel'               : trainModel,
-                 'testModel'                : testModel
+                 'testModel'                : testModel,
+                 'postPro'                  : postPro
 
                 }
     

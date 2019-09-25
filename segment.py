@@ -4,6 +4,7 @@ import shlex
 import time
 
 import pickle
+import random
 
 from timeit import default_timer as timer
 from PIL import Image
@@ -307,9 +308,10 @@ def trainModel(general, individual):
 def testModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
-
     original_gt = path + '/' + individual['original_gt']
+    test_flag   = individual['test_flag']
 
+    #...........................................................................
     train_data  = u_loadJson(path + '/' + individual['train_data'])
     u_look4PtInDict(train_data, path)
 
@@ -317,18 +319,21 @@ def testModel(general, individual):
     train_info  = u_loadJson(train_data['train_info_pt']) 
     model_file  = train_data['final_model_pt']     
     salience    = train_data['salience']     
-
-    
+        
     out_dir     = directory + '/outputs/' + model_name + '/'
     u_mkdir(out_dir)
 
     #...........................................................................
     test_dataset    = DbSegment(train_info, salience, False)
-    test_dataset.swap_()
+    if test_flag:
+        test_dataset.swap_()
+
     test_loader     = DataLoader(test_dataset, batch_size=1, shuffle=True)
     
     unet            = ud_loadModel(model_file)
     unet            = unet.cuda()
+
+    files           = []
 
     for i, (img, gt, lbl) in enumerate(test_loader):
         u_progress(i, len(test_loader))
@@ -343,27 +348,93 @@ def testModel(general, individual):
 
             resize  = T.Resize(size=(h, w))
 
-            npimg   = outputs[0].cpu().detach().numpy()
-            npimg   = np.transpose(npimg, (1, 2, 0) )
-
-            npimg   = npimg.reshape(-1, 1)
-
-            kmeans  = KMeans(n_clusters=4, init='k-means++', max_iter=300, n_init=10)
+            #npimg   = outputs[0].cpu().detach().numpy()
+            #npimg   = np.transpose(npimg, (1, 2, 0) )
             
-            kmeans.fit(npimg) 
-            out     = kmeans.predict(npimg)
-            out     = (out.reshape(224,224) /4 )* 255  
+            #npimg   = npimg.reshape(-1, 1)
+
+            #kmeans  = KMeans(n_clusters=4, init='k-means++', max_iter=300, n_init=10)
+            
+            #kmeans.fit(npimg) 
+            #out     = kmeans.predict(npimg)
+            #out     = (out.reshape(224,224) /4 )* 255  
                                           
-            out     = Image.fromarray(out)
-            out     = resize(out).convert('L')
+            #out     = Image.fromarray(npimg)
+            #out     = resize(out).convert('L')
 
             #show_tensor(img_)
             #show_tensor(gt_)
             #show_tensor(outputs)
 
-            file_name =  out_dir + lbl[0] + '_' + str(j) + '.png'
-            out.save(file_name)
+            file_name =  out_dir + lbl[0] + '_' + str(j) + '_t'+ str(test_flag) + '.png'
+            save_tensor_batch(file_name, outputs, resize)
+            files.append([lbl, file_name])
             
+            #out.save(file_name)
+
+    out_data = {
+        'files'         : files,
+        'test_flag'     : test_flag,
+        'original_gt'   : original_gt
+    }
+    str_flag  = 'test' if test_flag  else 'train'
+    u_saveDict2File(out_dir + str_flag +'.json', out_data)
+            
+################################################################################
+################################################################################
+def postPro(general, individual):
+    path        = general['prefix_path'][general['path_op']]
+    directory   = path + '/' + general['directory']
+    
+    info_data   = u_loadJson(path + '/' + individual['info_data'])
+    test_flag   = info_data['test_flag']
+    files       = info_data['files']
+
+    out_dir     = os.path.dirname(files[0][1]) + '/'
+    
+    #...........................................................................
+    if not test_flag:
+        clusters = []
+        for i, (_ , file) in enumerate(files):
+            u_progress(i, len(files))
+
+            im      = np.array(Image.open(file) )
+            x, y    = im.shape
+            im      = im.reshape(-1,1) 
+            
+            kmeans  = KMeans(n_clusters=4, init='k-means++', max_iter=200, n_init=10)
+            select  = im[random.sample(range(im.shape[0]), 8000)]
+
+            kmeans.fit(select)
+            
+            clusters.append(kmeans.cluster_centers_)
+
+        #......................................................................
+        kmeans  = KMeans(n_clusters=4, init='k-means++', max_iter=200, n_init=10)
+        clus    = np.array(clusters).reshape(-1,1)
+        kmeans.fit(clus)
+
+        u_saveArrayTuple2File(out_dir+'clusters.txt', kmeans.cluster_centers_)
+        
+    #...........................................................................
+    else:
+        clusters    = np.array(u_fileList2array(out_dir+'clusters.txt')).reshape(-1, 1)
+        kmeans      = KMeans(n_clusters=4, init='k-means++', max_iter=200, n_init=10)
+        kmeans.fit(clusters)
+
+        for i, (_ , file) in enumerate(files):
+            u_progress(i, len(files))
+            im      = np.array(Image.open(file) )
+            x, y    = im.shape
+            im      = im.reshape(-1,1) 
+
+            out     = kmeans.predict(im)
+            out     = out.reshape(x,y)
+
+            file    = file.replace('.png', '_cl.png')
+            im      = Image.fromarray(out)
+            im.save(file)
+
 ################################################################################
 ################################################################################
 def show_tensor(img):
@@ -374,7 +445,7 @@ def show_tensor(img):
 
 ################################################################################
 ################################################################################
-def save_tensor_batch(file_name, img):
+def save_tensor_batch(file_name, img, resize):
     print('File saved in :', file_name)
     for im in img:
         x   = im.cpu().detach().numpy()
@@ -384,6 +455,8 @@ def save_tensor_batch(file_name, img):
         #x   = np.pad(x, pad_width=20, mode='constant', constant_values=0)
         #plt.imshow(x)
         #plt.show()
-        x   = Image.fromarray(x).convert('L')
+        x   = Image.fromarray(x)
+        x   = resize(x).convert('L')
+
         x.save(file_name)
     
