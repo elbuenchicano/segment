@@ -1,5 +1,5 @@
 {
-  "function": "trainModel",
+  "function": "postPro",
 
   "general": {
 	"directory"	: "research/segmentation",
@@ -51,9 +51,9 @@
   "testModel"	: {
 	"train_data"	: "research/segmentation/models/unet_2str/train_data.json",
 	"original_gt"	: "datasets/image_files",
-	"test_flag"		: 0
+	"test_flag"		: 1
   },
   "postPro"	: {
-	"info_data"		: "research/segmentation/outputs/unet_vanilla/test.json"
+	"info_data"		: "research/segmentation/outputs/unet_2str/test.json"
   }	
 }

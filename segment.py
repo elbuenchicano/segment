@@ -348,10 +348,10 @@ def testModel(general, individual):
     u_mkdir(out_dir)
 
     #...........................................................................
+    
 
-    ###### cambiar esto para que este correcto
-
-    test_dataset    = DbSegment(train_info, salience, False, separate_sal_flag = True)
+    test_dataset    = DbSegment(train_info, salience, False, 
+                                separate_sal_flag = (model_name == 'unet_2str'))
 
     if test_flag:
         test_dataset.swap_()
@@ -372,7 +372,7 @@ def testModel(general, individual):
         for j in range(0, len(img)):
             
             gt_     = gt[j].cuda()
-            img_    = img[j][1].cuda()
+            img_    = img[j][0].cuda()
             
             outputs = call4Model(img[j], unet,  model_name == 'unet_2str')    
 
@@ -392,9 +392,9 @@ def testModel(general, individual):
             #out     = Image.fromarray(npimg)
             #out     = resize(out).convert('L')
 
-            show_tensor(img_)
-            show_tensor(gt_)
-            show_tensor(outputs)
+            #show_tensor(img_)
+            #show_tensor(gt_)
+            #show_tensor(outputs)
 
             file_name =  out_dir + lbl[0] + '_' + str(j) + '_t'+ str(test_flag) + '.png'
             save_tensor_batch(file_name, outputs, resize)
