@@ -215,8 +215,9 @@ def trainModel(general, individual):
     model_name  = individual['model_name']
 
     model_list  = {
-        'unet_salience'     : [UNet(4,1), True],
-        'unet_vanilla'      : [UNet(3,1), False],
+        'unet_salience'     : [UNet(4, 1), True],
+        'unet_vanilla'      : [UNet(3, 1), False],
+        'unet_2str'         : [UNet2Stream((3, 1), 1), True, True] 
         }
     
     #...........................................................................
@@ -229,7 +230,12 @@ def trainModel(general, individual):
     #...........................................................................
     if not chk_point[0]:
         u_look4PtInDict(train_info, path)
-        train_dataset   = DbSegment(train_info, model_list[model_name][1])
+        if len(model_list[model_name]) > 2:  
+            train_dataset   = DbSegment(train_info, model_list[model_name][1], 
+                                        separate_sal_flag = model_list[model_name][2])
+        else:
+            train_dataset   = DbSegment(train_info, model_list[model_name][1])
+
         train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         if not individual['train_info_pos']:
@@ -249,7 +255,7 @@ def trainModel(general, individual):
         criterion       = criterion.cuda()
         
     #...........................................................................        
-    summary(unet, (unet.in_channel, 184, 184), batch_size = batch_size)
+    #summary(unet, (184, 184, 184, 184))
         
     #...........................................................................
     criterion       = torch.nn.MSELoss(reduction='sum').cuda()
@@ -259,21 +265,24 @@ def trainModel(general, individual):
 
     for epoch in range(i_epoch, n_epochs):
         for i, (img, gt, _) in enumerate(train_loader):
+            
+            sloss = 0
             for j in range(1, len(img)):
-                img_    = img[j].cuda()
                 gt_     = gt[j].cuda()
-
-                outputs = unet(img_)
+                outputs = call4Model(img[j], unet,  model_name == 'unet_2str')    
+                
                 loss    = criterion(outputs, gt_)
                 loss_list.append(loss.data.cpu().numpy())
                 optimizer.zero_grad()       
                 loss.backward()
                 optimizer.step()
-                
-                # Track training progress
-                msg = 'epoch:' + str(epoch) + '| loss:' + str(float(loss.data.cpu().numpy()))
-                u_progress(i, len(train_loader)-1, msg)
-                           
+                sloss   += loss.data.cpu().numpy()
+        
+        
+            # Track training progress
+            msg = 'epoch:' + str(epoch) + '| loss:' + str(float(sloss/i))                       
+            u_progress(i, len(train_loader)-1, msg)
+            
 
         if not (epoch+1) % save_step:
             state = {
@@ -305,6 +314,21 @@ def trainModel(general, individual):
 
 ################################################################################
 ################################################################################
+def call4Model(img, model, flag):
+    if not flag:
+        img_    = img.cuda()
+        outputs = model(img_)
+    else:
+        img_, sal_  = img[0].cuda(), img[1].cuda()
+        outputs     = model(img_, sal_)
+    
+    return outputs
+    
+    
+    
+
+################################################################################
+################################################################################
 def testModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
@@ -324,7 +348,11 @@ def testModel(general, individual):
     u_mkdir(out_dir)
 
     #...........................................................................
-    test_dataset    = DbSegment(train_info, salience, False)
+
+    ###### cambiar esto para que este correcto
+
+    test_dataset    = DbSegment(train_info, salience, False, separate_sal_flag = True)
+
     if test_flag:
         test_dataset.swap_()
 
@@ -342,9 +370,11 @@ def testModel(general, individual):
         w, h    = im.size
 
         for j in range(0, len(img)):
-            img_    = img[j].cuda()
+            
             gt_     = gt[j].cuda()
-            outputs = unet(img_)
+            img_    = img[j][1].cuda()
+            
+            outputs = call4Model(img[j], unet,  model_name == 'unet_2str')    
 
             resize  = T.Resize(size=(h, w))
 
@@ -362,9 +392,9 @@ def testModel(general, individual):
             #out     = Image.fromarray(npimg)
             #out     = resize(out).convert('L')
 
-            #show_tensor(img_)
-            #show_tensor(gt_)
-            #show_tensor(outputs)
+            show_tensor(img_)
+            show_tensor(gt_)
+            show_tensor(outputs)
 
             file_name =  out_dir + lbl[0] + '_' + str(j) + '_t'+ str(test_flag) + '.png'
             save_tensor_batch(file_name, outputs, resize)

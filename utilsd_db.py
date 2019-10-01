@@ -246,11 +246,17 @@ class DbLoader(Dataset):
 ################################################################################
 class DbSegment(Dataset):
     
-    def __init__(self, info, salience_flag, train_flag=True, random_prob=0.5):
+    def __init__(self, info, 
+                 salience_flag, 
+                 train_flag         = True, 
+                 separate_sal_flag  = False,    # salience_flag must be true, it is for 
+                                                # separated images
+                 random_prob        = 0.5):
         
         self.random_prob    = random_prob
         self.info           = info
         self.salience       = salience_flag 
+        self.separated      = separate_sal_flag
 
         self.step           = 0
         self.side           = 224
@@ -418,7 +424,10 @@ class DbSegment(Dataset):
             mask    = TF.to_tensor(mask)
             sali    = TF.to_tensor(sali)
 
-            image   = torch.cat((image, sali), dim = 0)
+            if not self.separated:
+                image   = torch.cat((image, sali), dim = 0)
+            else: 
+                image   = (image, sali)
 
         #.......................................................................
         return image, mask
@@ -454,7 +463,10 @@ class DbSegment(Dataset):
             mask    = TF.to_tensor(mask)
             sali    = TF.to_tensor(sali)
 
-            image   = torch.cat((image, sali), dim = 0)
+            if not self.separated:
+                image   = torch.cat((image, sali), dim = 0)
+            else: 
+                image   = (image, sali)
 
         #.......................................................................
         return image, mask

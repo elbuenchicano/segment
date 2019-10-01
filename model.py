@@ -110,6 +110,35 @@ class UNet(nn.Module):
 
 #################################################################################
 #################################################################################
+######################## SEGMENTATION CLASS #####################################
+class UNet2Stream(nn.Module):
+        
+    def __init__(self, in_channel, out_channel):
+        super(UNet2Stream, self).__init__()
+        
+        self.in_channel     = in_channel
+        self.out_channel    = out_channel
+        self.u1     = UNet(in_channel=in_channel[0], out_channel= out_channel)
+        self.u2     = UNet(in_channel=in_channel[1], out_channel= out_channel)
+        self.cf     = torch.nn.Conv2d(kernel_size=3, in_channels = 2, 
+                               out_channels=out_channel, padding = 1)
+            
+    def cat_conv(self, u1, u2, in_channels, out_channels, kernel_size=3):
+        x = torch.cat((u1, u2), 1)
+        x = self.cf(x) 
+        return (x)
+
+    
+    def forward(self, im, sl):
+        # Encode
+        u1      = self.u1(im)
+        u2      = self.u2(sl)
+        final   = self.cat_conv(u1, u2, self.out_channel*2, self.out_channel)               
+        return  final
+
+
+#################################################################################
+#################################################################################
 ######################## SEGMENTATION CLASS GRU# ################################
 class FeatExtract(nn.Module):
     def __init__(self, backend):
