@@ -37,23 +37,23 @@
 			"bypatient"		: 1,
 			"img_ext"		: ".ppm",
 			"gt_ext"		: ".png",
-			"p_ext"			: ".pgm",	
+			"p_ext"			: ".pgm",	 
 			"nfolds"		: 7
 			},
 			"research/segmentation/lists/unet_info_01.json"
 		],
-	"n_epochs"		: 10,
+	"n_epochs"		: 75,
 	"save_step"		: 5,
 	"batch_size"	: 8,
-	"model_name"	: "unet_2str",
+	"model_name"	: "tunet",
 	"chk_point"		: [0, 4]
   },
   "testModel"	: {
-	"train_data"	: "research/segmentation/models/unet_2str/train_data.json",
+	"train_data"	: "research/segmentation/models/tunet/train_data.json",
 	"original_gt"	: "datasets/image_files",
 	"test_flag"		: 1
   },
   "postPro"	: {
-	"info_data"		: "research/segmentation/outputs/unet_2str/test.json"
+	"info_data"		: "research/segmentation/outputs/tunet/train.json"
   }	
 }

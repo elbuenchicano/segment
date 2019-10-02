@@ -217,7 +217,8 @@ def trainModel(general, individual):
     model_list  = {
         'unet_salience'     : [UNet(4, 1), True],
         'unet_vanilla'      : [UNet(3, 1), False],
-        'unet_2str'         : [UNet2Stream((3, 1), 1), True, True] 
+        'unet_2str'         : [UNet2Stream((3, 1), 1), True, True],
+        'tunet'             : [TuNet(3, 1, 1), True, True]
         }
     
     #...........................................................................
@@ -228,11 +229,17 @@ def trainModel(general, individual):
     u_mkdir(out_dir_w)
     
     #...........................................................................
+    if model_name == 'unet_2str' or model_name == 'tunet':
+        separated = True
+    else:
+        separated = False
+
+    #...........................................................................
     if not chk_point[0]:
         u_look4PtInDict(train_info, path)
         if len(model_list[model_name]) > 2:  
             train_dataset   = DbSegment(train_info, model_list[model_name][1], 
-                                        separate_sal_flag = model_list[model_name][2])
+                                        separate_sal_flag = separated)
         else:
             train_dataset   = DbSegment(train_info, model_list[model_name][1])
 
@@ -269,7 +276,7 @@ def trainModel(general, individual):
             sloss = 0
             for j in range(1, len(img)):
                 gt_     = gt[j].cuda()
-                outputs = call4Model(img[j], unet,  model_name == 'unet_2str')    
+                outputs = call4Model(img[j], unet, separated)    
                 
                 loss    = criterion(outputs, gt_)
                 loss_list.append(loss.data.cpu().numpy())
@@ -280,7 +287,7 @@ def trainModel(general, individual):
         
         
             # Track training progress
-            msg = 'epoch:' + str(epoch) + '| loss:' + str(float(sloss/i))                       
+            msg = 'epoch:' + str(epoch) + '| loss:' + str(float(loss.data.cpu().numpy()))                       
             u_progress(i, len(train_loader)-1, msg)
             
 
@@ -349,9 +356,13 @@ def testModel(general, individual):
 
     #...........................................................................
     
+    if model_name == 'unet_2str' or model_name == 'tunet':
+        separated = True
+    else:
+        separated = False
 
     test_dataset    = DbSegment(train_info, salience, False, 
-                                separate_sal_flag = (model_name == 'unet_2str'))
+                                separate_sal_flag = separated)
 
     if test_flag:
         test_dataset.swap_()
@@ -374,7 +385,7 @@ def testModel(general, individual):
             gt_     = gt[j].cuda()
             img_    = img[j][0].cuda()
             
-            outputs = call4Model(img[j], unet,  model_name == 'unet_2str')    
+            outputs = call4Model(img[j], unet,  separated)    
 
             resize  = T.Resize(size=(h, w))
 

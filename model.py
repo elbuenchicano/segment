@@ -139,21 +139,121 @@ class UNet2Stream(nn.Module):
 
 #################################################################################
 #################################################################################
-######################## SEGMENTATION CLASS GRU# ################################
-class FeatExtract(nn.Module):
-    def __init__(self, backend):
-        super(FeatExtract, self).__init__()
-        #backends = {
-        #    'resnet18' : torch.hub.load('pytorch/vision', 'resnet18', pretrained=False)
-        #    }
-        #self.net = backends[backend]
-        #summary(self.net, (224,224,3))
-               
-        
-
-
 #################################################################################
-class SoftPsp(nn.Module):
-    pass
+######################## SEGMENTATION CLASS UNION STR ###########################
+class TuNet(nn.Module):
+    def contracting_block(self, in_channels, out_channels, kernel_size=3):
+     
+        block = torch.nn.Sequential(
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=in_channels, out_channels=out_channels, padding = 1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(out_channels),
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=out_channels, out_channels=out_channels, padding = 1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(out_channels),
+                )
+        return block
+    
+    def expansive_block(self, in_channels, mid_channel, out_channels, kernel_size=3):
+            block = torch.nn.Sequential(
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=in_channels, out_channels=mid_channel, padding = 1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(mid_channel),
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=mid_channel, out_channels=mid_channel, padding = 1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(mid_channel),
+                    torch.nn.ConvTranspose2d(in_channels=mid_channel, out_channels=out_channels, kernel_size=3, stride=2, padding=1, output_padding=1)
+                    )
+            return  block
+    
+    def final_block(self, in_channels, mid_channel, out_channels, kernel_size=3):
+            block = torch.nn.Sequential(
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=in_channels, out_channels=mid_channel, padding = 1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(mid_channel),
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=mid_channel, out_channels=mid_channel, padding = 1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(mid_channel),
+                    torch.nn.Conv2d(kernel_size=kernel_size, in_channels=mid_channel, out_channels=out_channels, padding=1),
+                    torch.nn.ReLU(),
+                    torch.nn.BatchNorm2d(out_channels),
+                    )
+            return  block
+    
+    def __init__(self, in_channel_a, in_channel_b, out_channel):
+        super(TuNet, self).__init__()
+        #Encode
+        self.conv_encode1a  = self.contracting_block(in_channels=in_channel_a, out_channels=32)
+        self.conv_encode1b  = self.contracting_block(in_channels=in_channel_b, out_channels=32)
+        
+        self.conv_maxpool1a = torch.nn.MaxPool2d(kernel_size=2)
+        self.conv_encode2a  = self.contracting_block(32, 64)
+        self.conv_maxpool2a = torch.nn.MaxPool2d(kernel_size=2)
+        self.conv_encode3a  = self.contracting_block(64, 128)
+        self.conv_maxpool3a = torch.nn.MaxPool2d(kernel_size=2)
 
+        self.conv_maxpool1b = torch.nn.MaxPool2d(kernel_size=2)
+        self.conv_encode2b  = self.contracting_block(32, 64)
+        self.conv_maxpool2b = torch.nn.MaxPool2d(kernel_size=2)
+        self.conv_encode3b  = self.contracting_block(64, 128)
+        self.conv_maxpool3b = torch.nn.MaxPool2d(kernel_size=2)
+
+        
+        # Bottleneck
+        self.bottleneck = torch.nn.Sequential(
+                            torch.nn.Conv2d(kernel_size=3, in_channels=256, out_channels=512, padding = 1),
+                            torch.nn.ReLU(),
+                            torch.nn.BatchNorm2d(512),
+                            torch.nn.Conv2d(kernel_size=3, in_channels=512, out_channels=512, padding = 1),
+                            torch.nn.ReLU(),
+                            torch.nn.BatchNorm2d(512),
+                            torch.nn.ConvTranspose2d(in_channels=512, out_channels=256, kernel_size=3, stride=2, padding=1, output_padding=1)
+                            )
+        # Decode
+        self.conv_decode3   = self.expansive_block(512, 256, 128)
+        self.conv_decode2   = self.expansive_block(256, 128, 64)
+        self.final_layer    = self.final_block(128, 64, out_channel)
+        #self.in_channel     = in_channel 
+        
+    def crop_and_concat(self, upsampled, bypassa, bypassb, crop=False):
+        if crop:
+            c = (bypassa.size()[2] - upsampled.size()[2]) // 2
+            bypassa = F.pad(bypassa, (-c, -c, -c, -c))
+            bypassb = F.pad(bypassb, (-c, -c, -c, -c))
+
+        bypass = torch.cat((bypassa, bypassb), 1)
+        return torch.cat((upsampled, bypass), 1)
+    
+    def forward(self, x, y):
+        # Encode
+        encode_block1a  = self.conv_encode1a(x)
+        encode_pool1a   = self.conv_maxpool1a(encode_block1a)
+        encode_block2a  = self.conv_encode2a(encode_pool1a)
+        encode_pool2a   = self.conv_maxpool2a(encode_block2a)
+        encode_block3a  = self.conv_encode3a(encode_pool2a)
+        encode_pool3a   = self.conv_maxpool3a(encode_block3a)
+        
+        encode_block1b  = self.conv_encode1b(y)
+        encode_pool1b   = self.conv_maxpool1b(encode_block1b)
+        encode_block2b  = self.conv_encode2b(encode_pool1b)
+        encode_pool2b   = self.conv_maxpool2b(encode_block2b)
+        encode_block3b  = self.conv_encode3b(encode_pool2b)
+        encode_pool3b   = self.conv_maxpool3b(encode_block3b)
+
+        encode_pool3    = torch.cat((encode_pool3a, encode_pool3b), 1)
+
+        # Bottleneck
+        bottleneck1     = self.bottleneck(encode_pool3)
+
+        # Decode
+        decode_block3   = self.crop_and_concat(bottleneck1, encode_block3a, encode_block3b, crop=True)
+        cat_layer2      = self.conv_decode3(decode_block3)
+        
+        decode_block2   = self.crop_and_concat(cat_layer2, encode_block2a, encode_block2b, crop=True)
+        cat_layer1 = self.conv_decode2(decode_block2)
+
+        decode_block1 = self.crop_and_concat(cat_layer1, encode_block1a, encode_block1b, crop=True)
+        final_layer = self.final_layer(decode_block1)
+
+        return  final_layer
 
