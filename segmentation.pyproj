@@ -22,10 +22,19 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="metrics.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="model.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="model_resnet.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="pipes.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="preData.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="segment.py">

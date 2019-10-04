@@ -2,6 +2,8 @@ import json
 
 from utils     import u_getPath
 from segment   import *
+from preData   import *
+from pipes     import pipe
 
 ################################################################################
 ################################################################################
@@ -14,7 +16,8 @@ def _main():
                  'createTrainValTestList'   : createTrainValTestList,
                  'trainModel'               : trainModel,
                  'testModel'                : testModel,
-                 'postPro'                  : postPro
+                 'postPro'                  : postPro,
+                 'pipe'                     : pipe
 
                 }
     
@@ -24,10 +27,12 @@ def _main():
     confs['general']['path_op']    = u_whichOS()
 
     #...........................................................................
-    print(confs['function'])
+    print('Main Function: ', confs['function'])
     funcdict[confs['function']](general     = confs['general'],
                                 individual  = confs[confs['function']])
    
+
+
 ################################################################################
 ################################################################################
 ############################### MAIN ###########################################

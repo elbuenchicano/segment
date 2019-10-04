@@ -1,5 +1,5 @@
 {
-  "function": "postPro",
+  "function": "pipe",
 
   "general": {
 	"directory"	: "research/segmentation",
@@ -54,6 +54,14 @@
 	"test_flag"		: 1
   },
   "postPro"	: {
-	"info_data"		: "research/segmentation/outputs/tunet/train.json"
+	"info_data"		: "research/segmentation/outputs/tunet/test.json"
+  },	
+  
+  "pipe"	: {
+	"function"		: "pipe_1",
+	"args"			: {
+		"model"		: "unet_salience",
+		"functions"	: [0,1,1,1,1]
+	}
   }	
 }

@@ -16,185 +16,6 @@ from model import *
 import torchvision.transforms as T
 
 from sklearn.cluster import KMeans
-
-
-################################################################################
-################################################################################
-# This function Reads all files in png format from a especific directory, 
-# and transfroms the image into ppm file, the output is a list with alphanumeric
-# order list
-def preprocessingPpm(general, individual):
-
-    path        = general['prefix_path'][general['path_op']]
-    directory   = path + '/' + general['directory']
-
-    im_size     = individual['im_size'] 
-    im_dir      = path + '/' + individual['im_dir']
-
-    #...........................................................................
-    out_dir_list = directory + '/lists/'
-    out_dir_imgs = directory + '/scale/'
-    u_mkdir(out_dir_list)
-    u_mkdir(out_dir_imgs)
-
-    #...........................................................................
-    file_list_ori       = []
-    file_list_gt        = []
-    file_list_ori_ppm   = []
-
-    file_list           = u_listFileAll(im_dir, 'png')
-        
-    #...........................................................................
-    label = str(im_size[0]) + '_' + str(im_size[1])  
-    out_dir_imgs = out_dir_imgs + label + '/' 
-    u_mkdir(out_dir_imgs)
-
-    n = len(file_list)
-
-    m0 = [], m1 = [], m2 = [], s0 = [], s1 = [], s2 = []
-
-    for i in range(n):
-        u_progress(i, n)
-
-        file    = file_list[i] 
-        img     = Image.open(file)
-        img     = img.resize(im_size, Image.ANTIALIAS)            
-        img     = img.convert('RGB')
-        nimg    = np.array(img)
-        nimg    = np.moveaxis(nimg, 2, 0)
-
-
-        if file.find('gt') < 0:
-            file_list_ori.append(file_list[i])            
-
-            file_name   = file.replace('png', 'ppm')
-            full_name   = out_dir_imgs + os.path.basename(file_name)
-
-            img.save(full_name, 'ppm')
-            file_list_ori_ppm.append(file_name)
-
-        else:
-
-            m0.append(np.mean(nimg[0]))
-            m1.append(np.mean(nimg[1]))
-            m2.append(np.mean(nimg[2]))
-            s0.append(np.std(nimg[0]))
-            s1.append(np.std(nimg[1]))
-            s2.append(np.std(nimg[2]))
-
-            file_list_gt.append(file)
-            full_name   = out_dir_imgs + file
-            img.save(full_name, 'png')
-
-
-    m_s = ([np.mean(m0), np.mean(m1), np.mean(m2)],
-           [np.mean(s0), np.mean(s1), np.mean(s2)])
-    
-    u_saveArrayTuple2File(  out_dir_list + label + '_mean_std.txt', 
-                            m_s)
-    
-    
-    u_saveArray2File(   out_dir_list + label + '_file_list_original.lst', 
-                        file_list_ori)
-
-    u_saveFlist2File(out_dir_list + label + '_file_list_gt.lst', 
-                        out_dir_imgs, file_list_gt)
-
-    u_saveFlist2File(out_dir_list + label + '_file_list_ppm.lst', 
-                        out_dir_imgs, file_list_ori_ppm)
-
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-def callGraphSegment(out_dir, im_list, cmd1, cmd2):
-    graph_files = []
-    pgm_files   = []
-
-    root, flist = u_fileList2array_(im_list)
-
-    n = len (flist)
-    #...........................................................................
-    for i in range(n) :
-        u_progress(i,n)
-        file = flist[i]
-
-        name_file_  = os.path.basename(file).replace('ppm', 'graph') 
-        
-        name_file   = out_dir + '/' + name_file_
-
-        os.system(u_fillVecToken([cmd1, root + file, '4', name_file]) )
-
-        out_pgm_file    = name_file.replace('graph', 'pgm')
-        
-        subprocess.call(
-            shlex.split(
-                u_fillVecToken(['bash', cmd2, name_file, out_pgm_file, '2 100 0.1'])
-                )
-        )
-
-        graph_files.append(name_file_)
-        pgm_files.append(os.path.basename(out_pgm_file))
-
-    return graph_files, pgm_files
-
-################################################################################
-################################################################################
-def preprocessingTree(general, individual):
-    path        = general['prefix_path'][general['path_op']]
-    directory   = path + '/' + general['directory']
-
-    im_list     = path + '/' + individual['im_list']
-    cmd1        = path + '/' + individual['cmd1']
-    cmd2        = path + '/' + individual['cmd2']
-
-    #...........................................................................
-    out_dir_list    = directory + '/lists/'
-    u_mkdir(out_dir_list)
-
-    out_dir_graphs  = u_joinPath([directory, 'segbase'])
-    u_mkdir(out_dir_graphs)
-
-    #...........................................................................
-    graph_list, pgm_files = callGraphSegment(out_dir_graphs, im_list, cmd1, cmd2)
-    
-    u_saveFlist2File(   u_joinPath([out_dir_list, 'graphs.lst']), 
-                        out_dir_graphs, 
-                        graph_list)
-
-    u_saveFlist2File(   u_joinPath([out_dir_list, 'pgm_files.lst']), 
-                        out_dir_graphs, 
-                        pgm_files)
-    
-################################################################################
-################################################################################
-def createTrainValTestList(general, individual):
-    path        = general['prefix_path'][general['path_op']]
-    directory   = path + '/' + general['directory']
-
-    image_list      = individual['image_list']
-    image_list_gt   = individual['image_list_gt']
-    
-    #...........................................................................
-    out_dir_list    = directory + '/lists/'
-    u_mkdir(out_dir_list)                              
-
-    #...........................................................................
-    _, vimage_list = u_fileList2array_(image_list, )
-    
-    patient_list = {}
-    for file in vimage_list:
-        
-        patient, frame, n = os.path.splitext(file)[0].split('_')
-        if not patient in patient_list:
-            patient_list[patient] = {}
-
-        if not frame in patient_list[patient]:
-            patient_list[patient][frame] = []
-
-        patient_list[patient][frame].append(n)
-
-    u_saveDict2File(out_dir_list + 'patients.json', patient_list)
     
 ################################################################################
 ################################################################################
@@ -202,6 +23,7 @@ def trainModel(general, individual):
     path        = general['prefix_path'][general['path_op']]
     directory   = path + '/' + general['directory']
 
+    #...........................................................................
     if not individual['train_info_pos']:
         train_info      = individual['train_info'][individual['train_info_pos']]
     else:
@@ -214,6 +36,7 @@ def trainModel(general, individual):
     chk_point   = individual['chk_point']
     model_name  = individual['model_name']
 
+    #...........................................................................
     model_list  = {
         'unet_salience'     : [UNet(4, 1), True],
         'unet_vanilla'      : [UNet(3, 1), False],
@@ -235,7 +58,7 @@ def trainModel(general, individual):
         separated = False
 
     #...........................................................................
-    if not chk_point[0]:
+    if not chk_point[0]: # this part will be deprecated 
         u_look4PtInDict(train_info, path)
         if len(model_list[model_name]) > 2:  
             train_dataset   = DbSegment(train_info, model_list[model_name][1], 
@@ -244,7 +67,6 @@ def trainModel(general, individual):
             train_dataset   = DbSegment(train_info, model_list[model_name][1])
 
         train_loader    = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-
         if not individual['train_info_pos']:
             train_info_file = out_dir + train_info['name'] + '.json', train_dataset.info
             u_saveDict2File(train_info_file)
@@ -261,15 +83,10 @@ def trainModel(general, individual):
         unet            = model_list[model_name][0].cuda()
         criterion       = criterion.cuda()
         
-    #...........................................................................        
-    #summary(unet, (184, 184, 184, 184))
-        
     #...........................................................................
     criterion       = torch.nn.MSELoss(reduction='sum').cuda()
     optimizer       = torch.optim.Adam(unet.parameters(), lr=1e-4)
     
-
-
     for epoch in range(i_epoch, n_epochs):
         for i, (img, gt, _) in enumerate(train_loader):
             
@@ -306,7 +123,7 @@ def trainModel(general, individual):
     state= {'model'       : model_list[model_name][0],
             'state_dict'  : unet.state_dict()
            }
-
+    #...........................................................................
     model_file_out =  out_dir_w + 'final.pt'
     torch.save(state, model_file_out)
     ud_plotLoss(out_dir_w,  loss_list)
@@ -318,21 +135,6 @@ def trainModel(general, individual):
         'salience'          : model_list[model_name][1]
         }
     u_saveDict2File(out_dir_w + 'train_data.json', train_data)
-
-################################################################################
-################################################################################
-def call4Model(img, model, flag):
-    if not flag:
-        img_    = img.cuda()
-        outputs = model(img_)
-    else:
-        img_, sal_  = img[0].cuda(), img[1].cuda()
-        outputs     = model(img_, sal_)
-    
-    return outputs
-    
-    
-    
 
 ################################################################################
 ################################################################################
@@ -355,12 +157,12 @@ def testModel(general, individual):
     u_mkdir(out_dir)
 
     #...........................................................................
-    
     if model_name == 'unet_2str' or model_name == 'tunet':
         separated = True
     else:
         separated = False
 
+    #...........................................................................
     test_dataset    = DbSegment(train_info, salience, False, 
                                 separate_sal_flag = separated)
 
@@ -369,17 +171,15 @@ def testModel(general, individual):
 
     test_loader     = DataLoader(test_dataset, batch_size=1, shuffle=True)
     
+    #...........................................................................
     unet            = ud_loadModel(model_file)
     unet            = unet.cuda()
-
     files           = []
-
     for i, (img, gt, lbl) in enumerate(test_loader):
         u_progress(i, len(test_loader))
 
         im      = Image.open(original_gt + '/' + lbl[0] + '_gt_0.png')
         w, h    = im.size
-
         for j in range(0, len(img)):
             
             gt_     = gt[j].cuda()
@@ -388,21 +188,7 @@ def testModel(general, individual):
             outputs = call4Model(img[j], unet,  separated)    
 
             resize  = T.Resize(size=(h, w))
-
-            #npimg   = outputs[0].cpu().detach().numpy()
-            #npimg   = np.transpose(npimg, (1, 2, 0) )
             
-            #npimg   = npimg.reshape(-1, 1)
-
-            #kmeans  = KMeans(n_clusters=4, init='k-means++', max_iter=300, n_init=10)
-            
-            #kmeans.fit(npimg) 
-            #out     = kmeans.predict(npimg)
-            #out     = (out.reshape(224,224) /4 )* 255  
-                                          
-            #out     = Image.fromarray(npimg)
-            #out     = resize(out).convert('L')
-
             #show_tensor(img_)
             #show_tensor(gt_)
             #show_tensor(outputs)
@@ -410,9 +196,8 @@ def testModel(general, individual):
             file_name =  out_dir + lbl[0] + '_' + str(j) + '_t'+ str(test_flag) + '.png'
             save_tensor_batch(file_name, outputs, resize)
             files.append([lbl, file_name])
-            
-            #out.save(file_name)
 
+    #...........................................................................    
     out_data = {
         'files'         : files,
         'test_flag'     : test_flag,
@@ -475,6 +260,24 @@ def postPro(general, individual):
             file    = file.replace('.png', '_cl.png')
             im      = Image.fromarray(out)
             im.save(file)
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+# SUPPORT FUNCTIONS ############################################################
+################################################################################
+################################################################################
+def call4Model(img, model, flag):
+    if not flag:
+        img_    = img.cuda()
+        outputs = model(img_)
+    else:
+        img_, sal_  = img[0].cuda(), img[1].cuda()
+        outputs     = model(img_, sal_)
+    
+    return outputs
 
 ################################################################################
 ################################################################################
